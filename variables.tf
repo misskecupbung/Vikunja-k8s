@@ -46,7 +46,7 @@ variable "enable_cloudsql" {
 }
 
 variable "db_password" {
-  type        = string
-  sensitive   = true
-  description = "Database password (supply via TF_VAR_db_password env or secret manager; no default)"
+	type        = string
+	sensitive   = true
+	description = "Database password (supply via TF_VAR_db_password env or secret manager; no default)"
 }
