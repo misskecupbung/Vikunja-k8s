@@ -1,0 +1,13 @@
+apiVersion: v2
+name: keycloak
+version: 0.1.0
+description: Minimal Keycloak chart for dev deployment
+appVersion: "24.0.1"
+type: application
+keywords:
+  - keycloak
+  - sso
+  - oidc
+maintainers:
+  - name: platform
+    email: devnull@ananda.com
