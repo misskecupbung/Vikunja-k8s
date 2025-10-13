@@ -41,29 +41,6 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@v3
 
-      - name: Export Secrets
-        run: |
-          if [ -z "${{ secrets.VIKUNJA_DB_PASSWORD }}" ]; then
-            echo "Missing VIKUNJA_DB_PASSWORD secret" >&2; exit 1
-          fi
-          echo "TF_VAR_db_password=${{ secrets.VIKUNJA_DB_PASSWORD }}" >> $GITHUB_ENV
-
-      - name: Terraform Init
-        run: |
-          terraform init \
-            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
-            -backend-config="prefix=terraform"
-
-      - id: set-ws
-        name: Select Workspace
-        run: |
-          WS=$([[ "${{ github.ref }}" == "refs/heads/main" ]] && echo prod || echo dev)
-          echo "Using workspace: $WS"
-          terraform workspace new $WS || true
-          terraform workspace select $WS
-          echo "workspace=$WS" >> "$GITHUB_OUTPUT"
-          echo "TF_WORKSPACE=$WS" >> $GITHUB_ENV
-
       - name: Helm Template (Vikunja)
         run: helm template vikunja charts/vikunja -f charts/vikunja/values.yaml > rendered.yaml
 
@@ -74,6 +51,28 @@ jobs:
 
       - name: Kubeconform Validate
         run: kubeconform -ignore-missing-schemas -schema-location default -summary rendered.yaml
+
+      - name: Export Secrets
+        run: |
+          if [ -z "${{ secrets.VIKUNJA_DB_PASSWORD }}" ]; then
+            echo "Missing VIKUNJA_DB_PASSWORD secret" >&2; exit 1
+          fi
+          echo "TF_VAR_db_password=${{ secrets.VIKUNJA_DB_PASSWORD }}" >> $GITHUB_ENV
+
+      - name: Terraform Init
+        run: terraform init \
+          -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+          -backend-config="prefix=terraform"
+
+      - id: set-ws
+        name: Select Workspace
+        run: |
+          WS=$([[ "${{ github.ref }}" == "refs/heads/main" ]] && echo prod || echo dev)
+          echo "Using workspace: $WS"
+          terraform workspace new $WS || true
+          terraform workspace select $WS
+          echo "workspace=$WS" >> "$GITHUB_OUTPUT"
+          echo "TF_WORKSPACE=$WS" >> $GITHUB_ENV
 
   plan:
     name: Terraform Plan
@@ -91,10 +90,9 @@ jobs:
       - uses: google-github-actions/setup-gcloud@v3
 
       - name: Terraform Init
-        run: |
-          terraform init \
-            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
-            -backend-config="prefix=terraform"
+        run: terraform init \
+          -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+          -backend-config="prefix=terraform"
 
       - name: Select Workspace
         run: terraform workspace select ${{ needs.prepare.outputs.workspace }}
@@ -127,12 +125,13 @@ jobs:
           service_account: ${{ secrets.GCP_TERRAFORM_SA }}
       - uses: google-github-actions/setup-gcloud@v3
 
-      - name: Terraform Init & Select Workspace
-        run: |
-          terraform init \
-            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
-            -backend-config="prefix=terraform"
-          terraform workspace select ${{ needs.prepare.outputs.workspace }}
+      - name: Terraform Init
+        run: terraform init \
+          -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+          -backend-config="prefix=terraform"
+
+      - name: Select Workspace
+        run: terraform workspace select ${{ needs.prepare.outputs.workspace }}
 
       - name: Await Prod Approval
         if: github.ref == 'refs/heads/main'
