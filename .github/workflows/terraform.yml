@@ -51,6 +51,21 @@ jobs:
           echo 'Enabled services (sample):';
           gcloud services list --enabled --limit=10 || true
 
+      - name: Project & SA Sanity
+        run: |
+          echo "SA from secret: ${{ secrets.GCP_TERRAFORM_SA }}"
+          SA_PROJECT=$(echo '${{ secrets.GCP_TERRAFORM_SA }}' | cut -d'@' -f2 | cut -d'.' -f1)
+          echo "Derived SA project: $SA_PROJECT"
+          echo "GitHub GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}"
+          if [ "$SA_PROJECT" != "${{ secrets.GCP_PROJECT_ID }}" ]; then
+            echo "ERROR: Service account project ($SA_PROJECT) != GCP_PROJECT_ID (${{ secrets.GCP_PROJECT_ID }})"
+            exit 1
+          fi
+          echo "Listing secret to confirm existence:"
+          gcloud secrets describe vikunja-db-password --project ${{ secrets.GCP_PROJECT_ID }} || echo "Describe failed"
+          echo "Checking API enablement inside CI:"
+          gcloud services list --enabled --filter=secretmanager --project ${{ secrets.GCP_PROJECT_ID }} || echo "Secret Manager not listed"
+          
       - name: Fetch DB password (with fallback)
         id: fetch-secret
         run: |
