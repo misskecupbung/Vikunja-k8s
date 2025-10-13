@@ -24,7 +24,7 @@ spec:
             - --http-enabled=true
             - --hostname-strict=false
             - --cache=local
-            - --health-enabled=true   # ✅ enable health endpoints
+            - --health-enabled=true
           env:
             - name: KEYCLOAK_ADMIN
               valueFrom:
@@ -60,14 +60,14 @@ spec:
             - name: JAVA_OPTS_APPEND
               value: "-Xms256m -Xmx768m"
             - name: KC_HEALTH_ENABLED
-              value: "true"             # ✅ redundant but harmless; keeps consistent
+              value: "true"
           ports:
             - containerPort: 8080
           startupProbe:
             httpGet:
               path: /health/ready
               port: 8080
-            failureThreshold: 120       # ⏱ give more time for initial DB schema setup
+            failureThreshold: 120
             periodSeconds: 10
           readinessProbe:
             httpGet:
@@ -80,7 +80,7 @@ spec:
             httpGet:
               path: /health/live
               port: 8080
-            initialDelaySeconds: 180    # ⏱ allow time after startup
+            initialDelaySeconds: 180
             periodSeconds: 20
             failureThreshold: 6
           resources:

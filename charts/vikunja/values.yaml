@@ -53,6 +53,8 @@ postgres:
   user: vikunja
   password: vikunja
   database: vikunja
+  secretName: vikunja-db        # Kubernetes Secret created externally (workflow)
+  passwordKey: password         # Key inside secret containing the DB password
 
 externalSecrets:
   enabled: false
