@@ -1,0 +1,30 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: platform
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+    # Set a global static IP name created beforehand (gcloud compute addresses create ... --global)
+    kubernetes.io/ingress.global-static-ip-name: "${PLATFORM_LB_IP_NAME:-todo-platform-lb-ip}"
+spec:
+  rules:
+    - host: ${VIKUNJA_HOST:-vikunja.local}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: vikunja
+                port:
+                  number: 80
+    - host: ${KEYCLOAK_HOST:-keycloak.local}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: keycloak
+                port:
+                  number: 80

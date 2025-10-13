@@ -4,6 +4,9 @@ metadata:
   name: keycloak
   labels:
     app: keycloak
+  annotations:
+    # Enable Container-Native Load Balancing (NEG) so a shared platform Ingress can route traffic
+    cloud.google.com/neg: '{"ingress": true}'
 spec:
   selector:
     app: keycloak
