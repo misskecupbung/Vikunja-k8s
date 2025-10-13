@@ -20,7 +20,8 @@ env:
   GOOGLE_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
   TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
   TF_VAR_region: ${{ secrets.GCP_REGION }}
-
+  CLUSTER_NAME: ${{ secrets.CLUSTER_NAME }}
+  
 jobs:
   plan:
     name: Terraform Plan
@@ -149,24 +150,11 @@ jobs:
           service_account: ${{ secrets.GCP_TERRAFORM_SA }}
       - uses: google-github-actions/setup-gcloud@v3
 
-      - name: Get GKE Credentials
-        run: |
-          echo "USE_GKE_GCLOUD_AUTH_PLUGIN=True" >> $GITHUB_ENV
-          CLUSTER_NAME="vikunja-gke"
-          REGION="${{ env.TF_VAR_region }}"
-          if [ -z "${WORKSPACE}" ]; then echo "Workspace output empty, defaulting to dev"; WORKSPACE=dev; fi
-          if [ ! -f "environments/${WORKSPACE}.tfvars" ]; then echo "Missing environments/${WORKSPACE}.tfvars" >&2; exit 1; fi
-          ZONE_LINE=$(grep -E '^cluster_location' environments/${WORKSPACE}.tfvars || true)
-          if [ -n "$ZONE_LINE" ]; then
-            ZONE=$(echo "$ZONE_LINE" | awk -F'"' '{print $2}')
-            gcloud container clusters get-credentials "$CLUSTER_NAME" --zone "$ZONE" --project "$GOOGLE_PROJECT"
-          else
-            gcloud container clusters get-credentials "$CLUSTER_NAME" --region "$REGION" --project "$GOOGLE_PROJECT"
-          fi
-          for i in {1..30}; do
-            kubectl get nodes >/dev/null 2>&1 && break
-            echo "Waiting for cluster ($i)"; sleep 10
-          done
+      - id: 'get-credentials'
+        uses: 'google-github-actions/get-gke-credentials@v3'
+        with:
+          cluster_name: ${{ secrets.CLUSTER_NAME }}
+          location: ${{ secrets.TF_VAR_region }}
 
       - name: Create Keycloak Secrets
         run: |
@@ -191,21 +179,12 @@ jobs:
           workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
           service_account: ${{ secrets.GCP_TERRAFORM_SA }}
       - uses: google-github-actions/setup-gcloud@v3
-
-      - name: Get GKE Credentials
-        run: |
-          echo "USE_GKE_GCLOUD_AUTH_PLUGIN=True" >> $GITHUB_ENV
-          CLUSTER_NAME="vikunja-gke"
-          REGION="${{ env.TF_VAR_region }}"
-          if [ -z "${WORKSPACE}" ]; then echo "Workspace output empty, defaulting to dev"; WORKSPACE=dev; fi
-          if [ ! -f "environments/${WORKSPACE}.tfvars" ]; then echo "Missing environments/${WORKSPACE}.tfvars" >&2; exit 1; fi
-          ZONE_LINE=$(grep -E '^cluster_location' environments/${WORKSPACE}.tfvars || true)
-          if [ -n "$ZONE_LINE" ]; then
-            ZONE=$(echo "$ZONE_LINE" | awk -F'"' '{print $2}')
-            gcloud container clusters get-credentials "$CLUSTER_NAME" --zone "$ZONE" --project "$GOOGLE_PROJECT"
-          else
-            gcloud container clusters get-credentials "$CLUSTER_NAME" --region "$REGION" --project "$GOOGLE_PROJECT"
-          fi
+      
+      - id: 'get-credentials'
+        uses: 'google-github-actions/get-gke-credentials@v3'
+        with:
+          cluster_name: ${{ secrets.CLUSTER_NAME }}
+          location: ${{ secrets.TF_VAR_region }}
 
       - name: Create Vikunja Secret
         run: |
