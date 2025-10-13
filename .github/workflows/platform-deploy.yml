@@ -20,7 +20,8 @@ env:
   GOOGLE_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
   TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
   TF_VAR_region: ${{ secrets.GCP_REGION }}
-  CLUSTER_NAME: ${{ secrets.CLUSTER_NAME }}
+  CLUSTER_NAME: "vikunja-gke"
+  CLUSTER_LOCATION: "us-central1-a"
   
 jobs:
   plan:
@@ -153,8 +154,8 @@ jobs:
       - id: 'get-credentials'
         uses: 'google-github-actions/get-gke-credentials@v3'
         with:
-          cluster_name: ${{ secrets.CLUSTER_NAME }}
-          location: ${{ secrets.TF_VAR_region }}
+          cluster_name: ${{ env.CLUSTER_NAME }}
+          location: ${{ env.CLUSTER_LOCATION }}
 
       - name: Create Keycloak Secrets
         run: |
@@ -179,12 +180,12 @@ jobs:
           workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
           service_account: ${{ secrets.GCP_TERRAFORM_SA }}
       - uses: google-github-actions/setup-gcloud@v3
-      
+
       - id: 'get-credentials'
         uses: 'google-github-actions/get-gke-credentials@v3'
         with:
-          cluster_name: ${{ secrets.CLUSTER_NAME }}
-          location: ${{ secrets.TF_VAR_region }}
+          cluster_name: ${{ env.CLUSTER_NAME }}
+          location: ${{ env.CLUSTER_LOCATION }}
 
       - name: Create Vikunja Secret
         run: |
