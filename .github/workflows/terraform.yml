@@ -100,7 +100,7 @@ jobs:
         uses: trstringer/manual-approval@v1
         with:
           secret: ${{ github.TOKEN }}
-          approvers: your-github-username # replace with comma-separated usernames
+          approvers: misskecupbung
           minimum-approvals: 1
           issue-title: "Manual Approval Required for Terraform Apply (${ { env.TF_WORKSPACE } })"
           issue-body: "Please approve or deny the deployment. Plan artifact: terraform-plan-${{ env.TF_WORKSPACE }}"
