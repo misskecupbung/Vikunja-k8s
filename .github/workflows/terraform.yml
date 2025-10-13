@@ -45,12 +45,22 @@ jobs:
       - name: Fetch DB password from Secret Manager
         run: |
           echo "TF_VAR_db_password=$(gcloud secrets versions access latest --secret=vikunja-db-password --project ${{ secrets.GCP_PROJECT_ID }})" >> $GITHUB_ENV
-          
+
       - name: Terraform Init
         run: |
           terraform init \
             -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
-            -backend-config="prefix=terraform/${{ github.ref_name }}"
+            -backend-config="prefix=terraform"
+
+      - name: Select Terraform Workspace
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then WS=prod; else WS=dev; fi
+          echo "Using workspace: $WS"
+          if ! terraform workspace list | grep -q "^*\?\s*$WS$" && ! terraform workspace list | grep -q "\s$WS$"; then
+            terraform workspace new $WS
+          fi
+          terraform workspace select $WS
+          echo "TF_WORKSPACE=$WS" >> $GITHUB_ENV
 
       - name: Terraform Format
         run: terraform fmt -check -recursive
@@ -71,7 +81,7 @@ jobs:
 
       - name: Terraform Plan
         if: github.event_name == 'pull_request'
-        run: terraform plan -input=false -var-file=environments/dev.tfvars -no-color | tee plan.out
+        run: terraform plan -input=false -var-file=environments/$TF_WORKSPACE.tfvars -no-color | tee plan.out
 
       - name: Comment Plan on PR
         if: github.event_name == 'pull_request'
@@ -81,4 +91,4 @@ jobs:
 
       - name: Terraform Apply (main branch)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: terraform apply -auto-approve -var-file=environments/prod.tfvars
+        run: terraform apply -auto-approve -var-file=environments/$TF_WORKSPACE.tfvars

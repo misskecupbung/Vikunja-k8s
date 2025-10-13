@@ -9,7 +9,7 @@ modules/            # Terraform reusable modules (network, gke, cloudsql)
 charts/vikunja/     # Helm chart for the Vikunja application
 scripts/            # Helper scripts (deploy, destroy, monitor, debug, keycloak values)
 scripts/k8s/        # Raw k8s manifests (self-hosted postgres alternative)
-environments/       # tfvars per environment (dev, prod)
+environments/       # tfvars per environment (dev, prod) (using Terraform workspaces)
 main.tf, variables.tf, outputs.tf  # Root Terraform
 ```
 
@@ -100,22 +100,38 @@ Add these GitHub repository secrets:
 * `GCP_TERRAFORM_SA` – `terraform@PROJECT_ID.iam.gserviceaccount.com`
 * `TF_STATE_BUCKET` – name of your state bucket
 
-### 3. Initialize & deploy locally (dev)
+### 3. Initialize backend & create/select workspaces
+
+Using Terraform workspaces instead of per-env backend config files.
 
 ```
-export TF_VAR_db_password="$(openssl rand -base64 20)" # or export from a secret manager
-terraform init -backend-config="bucket=$PROJECT_ID-tf-state" -backend-config="prefix=terraform/dev"
+export TF_VAR_db_password="$(openssl rand -base64 20)"   # or fetch from Secret Manager
+terraform init -backend-config="bucket=$PROJECT_ID-tf-state" -backend-config="prefix=terraform"
+
+# First time only (creates persistent workspace state objects):
+terraform workspace new dev || true
+terraform workspace new prod || true
+
+# Work in dev
+terraform workspace select dev
 terraform plan -var-file=environments/dev.tfvars
 terraform apply -var-file=environments/dev.tfvars -auto-approve
 
 gcloud container clusters get-credentials $(terraform output -raw gke_cluster_name) --region $(terraform output -raw region 2>/dev/null || echo europe-west1)
 helm upgrade --install vikunja charts/vikunja \
-	--set cloudsql.instanceConnectionName="$(terraform output -raw cloudsql_instance)" \
-	--set postgres.host=127.0.0.1 # via cloud sql proxy sidecar
+  --set cloudsql.instanceConnectionName="$(terraform output -raw cloudsql_instance)" \
+  --set postgres.host=127.0.0.1 # via cloud sql proxy sidecar
 ```
 
-### 4. Trigger GitHub Actions
-Push a branch / open PR to see `terraform plan` comment; merge to `main` for automatic apply (prod tfvars).
+To deploy prod locally:
+```
+terraform workspace select prod
+terraform apply -var-file=environments/prod.tfvars -auto-approve
+```
+
+### 4. Trigger GitHub Actions (Workspace Aware)
+* Pull Requests: workflow selects `dev` workspace and runs plan with `environments/dev.tfvars`.
+* Push to `main`: workflow selects (or creates) `prod` workspace and applies with `environments/prod.tfvars`.
 
 ### 5. Rollback Strategy
 * Helm: `helm rollback vikunja <rev>`
@@ -203,6 +219,11 @@ The variable `db_password` has no default and is intentionally omitted from tfva
 4. For self-hosted Postgres, you can override Helm values using External Secrets so the password never appears in state (Cloud SQL user password still lands in state unless using a generated random + ignore_changes pattern—future enhancement).
 
 Makefile targets ease local workflows (`make init plan apply helm-template`).
+
+### Workspace Notes
+* State objects share the same bucket/prefix; Terraform appends `env:<workspace>` internally.
+* Switch environments safely with `terraform workspace select <name>` before planning/applying.
+* Use a label or `locals { env = terraform.workspace }` pattern to tag resources if needed.
 
 ## Further Enhancements (Future Work)
 

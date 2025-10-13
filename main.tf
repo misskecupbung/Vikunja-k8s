@@ -1,10 +1,10 @@
 module "network" {
-  source                = "./modules/network"
-  project_id            = var.project_id
-  region                = var.region
-  network_cidr          = var.network_cidr
-  subnet_cidr           = var.subnet_cidr
-  pods_secondary_range  = var.pods_cidr
+  source                   = "./modules/network"
+  project_id               = var.project_id
+  region                   = var.region
+  network_cidr             = var.network_cidr
+  subnet_cidr              = var.subnet_cidr
+  pods_secondary_range     = var.pods_cidr
   services_secondary_range = var.services_cidr
 }
 

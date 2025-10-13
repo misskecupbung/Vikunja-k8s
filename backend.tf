@@ -1,7 +1,5 @@
 terraform {
-  backend "gcs" {
-    bucket  = "CHANGE_ME_STATE_BUCKET"   # e.g. vikunja-tf-state-prod
-    prefix  = "terraform/state"          # folder within bucket
-    # impersonate_service_account = "tf-state-wi@PROJECT_ID.iam.gserviceaccount.com" (optional)
-  }
+  # GCS backend configuration. Bucket & prefix are supplied via terraform init -backend-config flags.
+  # Workspaces (dev, prod) will create separate state objects under the same prefix automatically (env:<workspace> naming).
+  backend "gcs" {}
 }
