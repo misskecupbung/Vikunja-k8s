@@ -28,7 +28,7 @@ ingress:
   tls: []
 
 # Explicit hostname when using shared platform ingress (ingress.enabled=false)
-hostnameOverride: ""
+hostnameOverride: "keycloak.misskecupbung.xyz"
 
 # Realm bootstrap configuration (executed via a Helm post-install/upgrade Job when enabled)
 realm:
