@@ -209,6 +209,23 @@ jobs:
 
       - name: Helm Deploy Vikunja
         run: |
-          helm upgrade --install vikunja charts/vikunja -f charts/vikunja/values-ci.yaml \
-            --set postgres.password='${{ secrets.VIKUNJA_DB_PASSWORD }}' \
-            --wait --timeout 5m
+          # Retrieve Cloud SQL public IP similar to Keycloak deployment
+          if [ -z "${CLOUDSQL_INSTANCE}" ]; then
+            echo "CLOUDSQL_INSTANCE env var not set" >&2; exit 1
+          fi
+          DB_HOST=$(gcloud sql instances describe "${CLOUDSQL_INSTANCE}" --format="value(ipAddresses[0].ipAddress)" || true)
+          if [ -z "$DB_HOST" ]; then
+            echo "Failed to obtain public IP for instance ${CLOUDSQL_INSTANCE}" >&2; exit 1
+          fi
+          echo "Using Cloud SQL host for Vikunja: $DB_HOST"
+          set -e
+          if ! helm upgrade --install vikunja charts/vikunja -f charts/vikunja/values-ci.yaml \
+            --set cloudsql.enabled=false \
+            --set postgres.host=$DB_HOST \
+            --wait --timeout 10m; then
+            echo "Helm install/upgrade failed; dumping pod diagnostics:" >&2
+            kubectl get pods -l app=vikunja -o wide || true
+            kubectl describe pods -l app=vikunja || true
+            kubectl logs -l app=vikunja --all-containers --tail=200 || true
+            exit 1
+          fi
