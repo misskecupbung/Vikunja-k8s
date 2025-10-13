@@ -3,13 +3,14 @@ image:
   tag: 24.0.1
 
 database:
-  host: localhost
+  host: 0.0.0.0            # Overridden via --set database.host=<cloudsql_public_ip>
   name: vikunja
   user: vikunja
+  parameters: "sslmode=require"  # Additional JDBC parameters
 
 cloudsql:
-  enabled: true
-  instanceConnectionName: "" # project:region:instance (filled by CI or override)
+  enabled: false            # Direct mode default; enable for proxy approach
+  instanceConnectionName: "" # Only used if enabled
   image: gcr.io/cloudsql-docker/gce-proxy:1.37.0
   resources:
     requests:

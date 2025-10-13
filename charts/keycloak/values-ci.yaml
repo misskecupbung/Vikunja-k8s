@@ -1,11 +1,12 @@
 database:
-  host: vikunja-db.public-ip-or-dns
+  host: vikunja-db.public-ip-or-dns   # Replaced in CI pipeline with terraform output cloudsql_public_ip
   name: vikunja
   user: vikunja
+  parameters: "sslmode=require"
 
 cloudsql:
-  enabled: true
-  instanceConnectionName: project:region:vikunja-sql
+  enabled: false
+  instanceConnectionName: ""  # Not used in direct mode
 
 ingress:
   enabled: true
