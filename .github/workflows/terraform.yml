@@ -43,15 +43,11 @@ jobs:
       - name: Setup gcloud
         uses: google-github-actions/setup-gcloud@v3
 
-      - name: Fetch secrets from Secret Manager
-        id: secrets
-        uses: google-github-actions/get-secretmanager-secrets@v3
-        with:
-          secrets: |
-            vikunja-db-password:projects/${{ secrets.GCP_PROJECT_ID }}/secrets/vikunja-db-password
-
-      - name: Export DB password for Terraform
-        run: echo "TF_VAR_db_password=${{ steps.secrets.outputs.vikunja-db-password }}" >> $GITHUB_ENV
+      - name: Export DB password (GitHub Secret)
+        run: |
+          if [ -z "${{ secrets.VIKUNJA_DB_PASSWORD }}" ]; then
+            echo "Missing required GitHub secret VIKUNJA_DB_PASSWORD" >&2; exit 1; fi
+          echo "TF_VAR_db_password=${{ secrets.VIKUNJA_DB_PASSWORD }}" >> $GITHUB_ENV
 
       - name: Terraform Init
         run: |
@@ -119,7 +115,7 @@ jobs:
             Please approve or deny the deployment.
             Workspace: ${{ needs.terraform-plan.outputs.workspace }}
             Plan artifact: terraform-plan-${{ needs.terraform-plan.outputs.workspace }}
-            Fallback secret used flag: ${{ steps.fetch-secret.outputs.fallback_used }}
+            (Secret sourced from GitHub Actions secret VIKUNJA_DB_PASSWORD)
 
   terraform-apply:
     name: Terraform Apply
@@ -144,15 +140,11 @@ jobs:
           service_account: ${{ secrets.GCP_TERRAFORM_SA }}
       - name: Setup gcloud
         uses: google-github-actions/setup-gcloud@v3
-      - name: Fetch secrets from Secret Manager
-        id: secrets
-        uses: google-github-actions/get-secretmanager-secrets@v3
-        with:
-          secrets: |
-            vikunja-db-password:projects/${{ secrets.GCP_PROJECT_ID }}/secrets/vikunja-db-password
-
-      - name: Export DB password for Terraform
-        run: echo "TF_VAR_db_password=${{ steps.secrets.outputs.vikunja-db-password }}" >> $GITHUB_ENV
+      - name: Export DB password (GitHub Secret)
+        run: |
+          if [ -z "${{ secrets.VIKUNJA_DB_PASSWORD }}" ]; then
+            echo "Missing required GitHub secret VIKUNJA_DB_PASSWORD" >&2; exit 1; fi
+          echo "TF_VAR_db_password=${{ secrets.VIKUNJA_DB_PASSWORD }}" >> $GITHUB_ENV
 
       - name: Terraform Init
         run: |
