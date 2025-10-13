@@ -19,6 +19,7 @@ main.tf, variables.tf, outputs.tf  # Root Terraform
 2. Helm: Package application level k8s manifests with parameterization (DB host, Cloud SQL proxy sidecar, autoscaling, ingress, network policy). Helm supports easy upgrades and rollback for the app.
 3. Managed DB (Cloud SQL) (default): Provides automated backups, PITR, HA (regional), patching, and reduces operational toil vs. self-hosting. A self-hosted Postgres StatefulSet manifest is supplied for completeness / local or cost‑sensitive scenarios.
 4. Optional Keycloak: Industry-standard OpenID Connect provider for IAM. Can be deployed via existing community/bitnami chart using `scripts/keycloak-values.yaml` as override.
+> Note: A legacy standalone `platform-ingress.yaml` file has been removed. The shared ingress is now managed exclusively by the `charts/platform` Helm chart for consistency and upgrade/rollback support.
 
 ## Database Strategy Justification
 
