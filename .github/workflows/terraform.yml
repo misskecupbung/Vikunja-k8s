@@ -80,7 +80,6 @@ jobs:
         run: kubeconform -ignore-missing-schemas -schema-location default -summary rendered.yaml
 
       - name: Terraform Plan
-        if: github.event_name == 'pull_request'
         run: terraform plan -input=false -var-file=environments/$TF_WORKSPACE.tfvars -no-color | tee plan.out
 
       - name: Comment Plan on PR
@@ -89,6 +88,8 @@ jobs:
         with:
           path: plan.out
 
-      - name: Terraform Apply (main branch)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: terraform apply -auto-approve -var-file=environments/$TF_WORKSPACE.tfvars
+      - name: Upload Plan Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan-${{ env.TF_WORKSPACE }}
+          path: plan.out

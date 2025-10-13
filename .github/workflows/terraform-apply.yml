@@ -1,0 +1,70 @@
+name: terraform-apply
+
+on:
+  workflow_dispatch:
+    inputs:
+      workspace:
+        description: "Terraform workspace to apply (dev or prod)"
+        required: true
+        default: dev
+        type: choice
+        options:
+          - dev
+          - prod
+      approve:
+        description: "Type 'apply' to confirm deployment"
+        required: true
+        default: ""
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  TF_IN_AUTOMATION: true
+  GOOGLE_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
+  TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
+  TF_VAR_region: ${{ secrets.GCP_REGION }}
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check approval gate
+        run: |
+          if [ "${{ github.event.inputs.approve }}" != "apply" ]; then
+            echo "Approval gate not satisfied. Enter 'apply' in the approve field." >&2
+            exit 1
+          fi
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
+      - name: Authenticate to Google Cloud (OIDC)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_TERRAFORM_SA }}
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+      - name: Fetch DB password from Secret Manager
+        run: |
+          echo "TF_VAR_db_password=$(gcloud secrets versions access latest --secret=vikunja-db-password --project ${{ secrets.GCP_PROJECT_ID }})" >> $GITHUB_ENV
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+            -backend-config="prefix=terraform"
+      - name: Select Workspace
+        env:
+          TARGET_WS: ${{ github.event.inputs.workspace }}
+        run: |
+          terraform workspace list | grep -q "\s$TARGET_WS$" || terraform workspace new $TARGET_WS
+          terraform workspace select $TARGET_WS
+          echo "TF_WORKSPACE=$TARGET_WS" >> $GITHUB_ENV
+      - name: Terraform Plan (refresh-only sanity)
+        run: terraform plan -input=false -refresh=true -detailed-exitcode -var-file=environments/$TF_WORKSPACE.tfvars || true
+      - name: Terraform Apply
+        run: terraform apply -input=false -auto-approve -var-file=environments/$TF_WORKSPACE.tfvars
