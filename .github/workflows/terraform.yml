@@ -51,48 +51,10 @@ jobs:
           echo 'Enabled services (sample):';
           gcloud services list --enabled --limit=10 || true
 
-      - name: Project & SA Sanity
+      - name: Fetch DB password from Secret Manager
         run: |
-          echo "SA from secret: ${{ secrets.GCP_TERRAFORM_SA }}"
-          SA_PROJECT=$(echo '${{ secrets.GCP_TERRAFORM_SA }}' | cut -d'@' -f2 | cut -d'.' -f1)
-          echo "Derived SA project: $SA_PROJECT"
-          echo "GitHub GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}"
-          if [ "$SA_PROJECT" != "${{ secrets.GCP_PROJECT_ID }}" ]; then
-            echo "ERROR: Service account project ($SA_PROJECT) != GCP_PROJECT_ID (${{ secrets.GCP_PROJECT_ID }})"
-            exit 1
-          fi
-          echo "Listing secret to confirm existence:"
-          gcloud secrets describe vikunja-db-password --project ${{ secrets.GCP_PROJECT_ID }} || echo "Describe failed"
-          echo "Checking API enablement inside CI:"
-          gcloud services list --enabled --filter=secretmanager --project ${{ secrets.GCP_PROJECT_ID }} || echo "Secret Manager not listed"
+          echo "TF_VAR_db_password=$(gcloud secrets versions access latest --secret=vikunja-db-password --project ${{ secrets.GCP_PROJECT_ID }})" >> $GITHUB_ENV
           
-      - name: Fetch DB password (with fallback)
-        id: fetch-secret
-        run: |
-          set -euo pipefail
-          SECRET_NAME="vikunja-db-password"
-          PROJECT="${{ secrets.GCP_PROJECT_ID }}"
-          echo "Attempting Secret Manager access for $SECRET_NAME in $PROJECT"
-          FALLBACK_FLAG=0
-          if PASSWORD=$(gcloud secrets versions access latest --secret="$SECRET_NAME" --project "$PROJECT" 2> /tmp/secret_err); then
-            echo "Secret Manager fetch successful."
-          elif [ -n "${{ secrets.VIKUNJA_DB_PASSWORD }}" ]; then
-            echo "Secret Manager fetch failed; using GitHub secret fallback."; FALLBACK_FLAG=1
-            PASSWORD='${{ secrets.VIKUNJA_DB_PASSWORD }}'
-          else
-            echo "Secret Manager fetch failed (details):"; cat /tmp/secret_err || true
-            echo "No GitHub fallback provided; generating ephemeral password (NOT FOR PROD)."; FALLBACK_FLAG=2
-            # Avoid piping to head (causes broken pipe under set -euo pipefail)
-            # Generate 48 bytes base64 then strip non-alphanumerics and cut to 24 chars
-            PASSWORD=$(openssl rand -base64 48 | tr -dc 'A-Za-z0-9' | cut -c1-24)
-          fi
-          if [ "$FALLBACK_FLAG" = "2" ]; then
-            echo "WARNING: Ephemeral password generated. Create Secret Manager secret '$SECRET_NAME' to eliminate this path." >&2
-          fi
-          echo "::add-mask::$PASSWORD"
-          echo "TF_VAR_db_password=$PASSWORD" >> "$GITHUB_ENV"
-          echo "fallback_used=$FALLBACK_FLAG" >> "$GITHUB_OUTPUT"
-
       - name: Terraform Init
         run: |
           terraform init \
