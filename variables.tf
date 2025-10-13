@@ -50,3 +50,34 @@ variable "db_password" {
   sensitive   = true
   description = "Database password (supply via TF_VAR_db_password env or secret manager; no default)"
 }
+
+# Sizing variables (override in per-environment tfvars)
+variable "gke_min_nodes" {
+  type        = number
+  default     = 1
+  description = "Minimum number of nodes in primary node pool"
+}
+
+variable "gke_max_nodes" {
+  type        = number
+  default     = 2
+  description = "Maximum number of nodes in primary node pool"
+}
+
+variable "gke_machine_type" {
+  type        = string
+  default     = "e2-standard-2"
+  description = "Machine type for GKE nodes (dev default smaller)"
+}
+
+variable "cloudsql_tier" {
+  type        = string
+  default     = "db-f1-micro"
+  description = "Cloud SQL tier (db-f1-micro for dev; override to production tier in prod tfvars)"
+}
+
+variable "cloudsql_availability_type" {
+  type        = string
+  default     = "ZONAL"
+  description = "Cloud SQL availability type (ZONAL for dev, REGIONAL for HA prod)"
+}
