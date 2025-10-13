@@ -24,6 +24,7 @@ spec:
             - --http-enabled=true
             - --hostname-strict=false
             - --cache=local
+            - --health-enabled=true   # ✅ enable health endpoints
           env:
             - name: KEYCLOAK_ADMIN
               valueFrom:
@@ -50,7 +51,6 @@ spec:
                   key: password
             - name: KC_DB_URL_PROPERTIES
               value: '{{ default "" .Values.database.parameters }}'
-            # Use proxy headers instead of deprecated KC_PROXY flag (edge equivalent)
             - name: KC_PROXY_HEADERS
               value: xforwarded
             - name: KC_HTTP_RELATIVE_PATH
@@ -59,28 +59,28 @@ spec:
               value: "{{ if .Values.ingress.enabled }}{{ .Values.ingress.host }}{{ end }}"
             - name: JAVA_OPTS_APPEND
               value: "-Xms256m -Xmx768m"
-            - name: KC_FEATURES
-              value: "health"
+            - name: KC_HEALTH_ENABLED
+              value: "true"             # ✅ redundant but harmless; keeps consistent
           ports:
             - containerPort: 8080
+          startupProbe:
+            httpGet:
+              path: /health/ready
+              port: 8080
+            failureThreshold: 120       # ⏱ give more time for initial DB schema setup
+            periodSeconds: 10
           readinessProbe:
             httpGet:
               path: /health/ready
               port: 8080
-            initialDelaySeconds: 60
+            initialDelaySeconds: 30
             periodSeconds: 10
             failureThreshold: 12
-          startupProbe:
-            httpGet:
-              path: /health
-              port: 8080
-            failureThreshold: 40
-            periodSeconds: 5
           livenessProbe:
             httpGet:
               path: /health/live
               port: 8080
-            initialDelaySeconds: 120
+            initialDelaySeconds: 180    # ⏱ allow time after startup
             periodSeconds: 20
             failureThreshold: 6
           resources:
@@ -90,4 +90,3 @@ spec:
             limits:
               cpu: "1"
               memory: 1.5Gi
-  # Cloud SQL proxy sidecar optional; removed when cloudsql.enabled=false
