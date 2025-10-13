@@ -1,0 +1,8 @@
+database:
+  host: vikunja-db.public-ip-or-dns
+  name: vikunja
+  user: vikunja
+
+# These secrets should be created in advance or injected by CI
+# keycloak-admin: password: <admin password>
+# keycloak-db: password: <db password>
