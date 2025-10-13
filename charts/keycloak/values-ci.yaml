@@ -3,6 +3,25 @@ database:
   name: vikunja
   user: vikunja
 
+ingress:
+  enabled: true
+  className: "gce"
+  host: keycloak.local
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+    kubernetes.io/ingress.allow-http: "true"
+  tls: []
+
+# Realm bootstrap (optional; disabled by default in CI unless explicitly enabled)
+realm:
+  enabled: false
+  name: vikunja
+  clients:
+    - clientId: vikunja-web
+      publicClient: true
+      redirectUris:
+        - "https://vikunja.local/*"
+
 # These secrets should be created in advance or injected by CI
-# keycloak-admin: password: <admin password>
+# keycloak-admin: username: admin, password: <admin password>
 # keycloak-db: password: <db password>

@@ -33,6 +33,25 @@ spec:
               value: {{ .Values.postgres.database | quote }}
             - name: VIKUNJA_SERVICE_PUBLICURL
               value: "https://{{ .Values.ingress.host }}"
+{{- if .Values.openid.enabled }}
+            - name: VIKUNJA_AUTH_OPENID_ENABLED
+              value: "true"
+            - name: VIKUNJA_AUTH_OPENID_ISSUER
+              value: {{ .Values.openid.issuer | quote }}
+            - name: VIKUNJA_AUTH_OPENID_CLIENTID
+              value: {{ .Values.openid.clientId | quote }}
+            - name: VIKUNJA_AUTH_OPENID_REDIRECTURL
+              value: {{ .Values.openid.redirectURL | quote }}
+            - name: VIKUNJA_AUTH_OPENID_SCOPE
+              value: {{ .Values.openid.scopes | quote }}
+  {{- if and .Values.openid.confidentialClient .Values.openid.secretName }}
+            - name: VIKUNJA_AUTH_OPENID_CLIENTSECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.openid.secretName }}
+                  key: CLIENT_SECRET
+  {{- end }}
+{{- end }}
           ports:
             - containerPort: 3456
               name: http
