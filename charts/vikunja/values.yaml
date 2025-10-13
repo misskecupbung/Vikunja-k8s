@@ -10,7 +10,7 @@ frontend:
 replicaCount: 2
 
 cloudsql:
-  enabled: true
+  enabled: false
   instanceConnectionName: "" # filled via --set or values override
 
 service:

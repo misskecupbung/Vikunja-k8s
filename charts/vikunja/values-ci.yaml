@@ -20,7 +20,7 @@ resources:
     memory: 256Mi
 
 cloudsql:
-  enabled: true
+  enabled: false
   instanceConnectionName: ""  # injected via --set cloudsql.instanceConnectionName=...
 
 postgres:
