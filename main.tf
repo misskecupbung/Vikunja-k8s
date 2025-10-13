@@ -23,7 +23,7 @@ module "gke" {
   min_nodes                       = var.gke_min_nodes
   max_nodes                       = var.gke_max_nodes
   machine_type                    = var.gke_machine_type
-  disk_size_gb                   = var.gke_disk_size_gb
+  disk_size_gb                    = var.gke_disk_size_gb
   enable_workload_identity        = true
   enable_vertical_pod_autoscaling = false # disable to save overhead in dev
   labels                          = { env = "dev" }
