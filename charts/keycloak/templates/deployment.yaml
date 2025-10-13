@@ -17,47 +17,67 @@ spec:
       containers:
         - name: keycloak
           image: quay.io/keycloak/keycloak:24.0.1
+          command:
+            - /opt/keycloak/bin/kc.sh
           args:
-            - start-dev
+            - start
+            - --http-enabled=true
+            - --hostname-strict=false
+            - --cache=local
           env:
             - name: KEYCLOAK_ADMIN
-              value: "admin"
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-admin
+                  key: username
             - name: KEYCLOAK_ADMIN_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: keycloak-admin
                   key: password
-            - name: DB_VENDOR
-              value: "postgres"
-            - name: DB_ADDR
+            - name: KC_DB
+              value: postgres
+            - name: KC_DB_URL_HOST
               value: "{{ .Values.database.host }}"
-            - name: DB_DATABASE
+            - name: KC_DB_URL_DATABASE
               value: "{{ .Values.database.name }}"
-            - name: DB_USER
+            - name: KC_DB_USERNAME
               value: "{{ .Values.database.user }}"
-            - name: DB_PASSWORD
+            - name: KC_DB_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: keycloak-db
                   key: password
+            - name: KC_PROXY
+              value: edge
+            - name: KC_HTTP_RELATIVE_PATH
+              value: /
+            {{- if .Values.ingress.enabled }}
+            - name: KC_HOSTNAME
+              value: "{{ .Values.ingress.host }}"
+            {{- end }}
+            - name: JAVA_OPTS_APPEND
+              value: "-Xms256m -Xmx768m"
           ports:
             - containerPort: 8080
           readinessProbe:
             httpGet:
-              path: /
-              port: 8080
-            initialDelaySeconds: 10
-            periodSeconds: 5
-          livenessProbe:
-            httpGet:
-              path: /
+              path: /health/ready
               port: 8080
             initialDelaySeconds: 30
             periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            failureThreshold: 6
           resources:
             requests:
-              cpu: 100m
-              memory: 256Mi
+              cpu: 200m
+              memory: 512Mi
             limits:
-              cpu: 500m
-              memory: 1Gi
+              cpu: 1
+              memory: 1.5Gi
