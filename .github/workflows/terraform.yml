@@ -149,6 +149,26 @@ jobs:
       - name: Terraform Apply
         if: github.ref != 'refs/heads/main'
         run: terraform apply -input=false -auto-approve -var-file=environments/$TF_WORKSPACE.tfvars
+      - name: Deploy Keycloak (Helm)
+        if: github.ref != 'refs/heads/main'
+        run: |
+          if [ -z "${{ secrets.KEYCLOAK_DB_PASSWORD }}" ]; then echo "Missing KEYCLOAK_DB_PASSWORD secret" >&2; exit 1; fi
+          kubectl config get-contexts
+          echo "Creating Keycloak secrets"
+          kubectl create secret generic keycloak-admin --from-literal=password=admin --dry-run=client -o yaml | kubectl apply -f -
+          kubectl create secret generic keycloak-db --from-literal=password='${{ secrets.KEYCLOAK_DB_PASSWORD }}' --dry-run=client -o yaml | kubectl apply -f -
+          echo "Deploying Keycloak" 
+          helm upgrade --install keycloak charts/keycloak -f charts/keycloak/values-ci.yaml --wait --timeout 5m
+      - name: Deploy Vikunja (Helm)
+        if: github.ref != 'refs/heads/main'
+        run: |
+          if [ -z "${{ secrets.VIKUNJA_DB_PASSWORD }}" ]; then echo "Missing VIKUNJA_DB_PASSWORD secret" >&2; exit 1; fi
+          echo "Creating Vikunja DB secret"
+          kubectl create secret generic vikunja-db --from-literal=password='${{ secrets.VIKUNJA_DB_PASSWORD }}' --dry-run=client -o yaml | kubectl apply -f -
+          echo "Deploying Vikunja"
+          helm upgrade --install vikunja charts/vikunja -f charts/vikunja/values-ci.yaml \
+            --set postgres.password='${{ secrets.VIKUNJA_DB_PASSWORD }}' \
+            --wait --timeout 5m
       - name: Await Prod Approval Apply
         if: github.ref == 'refs/heads/main'
         uses: trstringer/manual-approval@v1

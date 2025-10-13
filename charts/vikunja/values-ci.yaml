@@ -1,0 +1,34 @@
+# CI deployment overrides for Vikunja (non-secret)
+# Dynamic pieces (DB password, Cloud SQL IP, instance connection name) are passed via --set in the workflow.
+
+replicaCount: 1
+
+ingress:
+  enabled: true
+  className: gce
+  host: vikunja.dev.local
+  annotations:
+    kubernetes.io/ingress.class: gce
+  tls: []
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 400m
+    memory: 256Mi
+
+cloudsql:
+  enabled: true
+  instanceConnectionName: ""  # injected via --set cloudsql.instanceConnectionName=...
+
+postgres:
+  host: ""   # injected via --set postgres.host=...
+  user: vikunja
+  password: "" # injected via --set postgres.password=...
+  database: vikunja
+
+keycloak:
+  enabled: true
+  issuer: "https://keycloak.example.com/realms/vikunja"
