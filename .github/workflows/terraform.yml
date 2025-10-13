@@ -43,18 +43,10 @@ jobs:
       - name: Setup gcloud
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Debug GCP Identity
-        run: |
-          echo "Auth context (expected SA: ${{ secrets.GCP_TERRAFORM_SA }})";
-          gcloud auth list;
-          gcloud config list --format 'value(core.project,core.account)';
-          echo 'Enabled services (sample):';
-          gcloud services list --enabled --limit=10 || true
-
       - name: Fetch DB password from Secret Manager
         run: |
           echo "TF_VAR_db_password=$(gcloud secrets versions access latest --secret=vikunja-db-password --project ${{ secrets.GCP_PROJECT_ID }})" >> $GITHUB_ENV
-          
+
       - name: Terraform Init
         run: |
           terraform init \
