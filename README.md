@@ -174,6 +174,46 @@ helm upgrade --install vikunja charts/vikunja \
 * `scripts/debug.sh` gathers describe + logs for first Vikunja pod.
 
 ## External Secrets Integration (Optional)
+## OIDC Integration (Keycloak + Vikunja)
+
+This repository now configures a Keycloak realm `vikunja` with a public client `vikunja-web` and enables OpenID Connect in the Vikunja deployment automatically via the GitHub Actions workflow.
+
+### Flow Summary
+1. Keycloak deploy step provisions the realm and client (Helm post-install Job).
+2. Vikunja deploy step sets `VIKUNJA_AUTH_OPENID_*` env vars (issuer, client id, redirect URL) via Helm values.
+3. Shared `platform` ingress exposes both hosts on a single static IP.
+
+### Required DNS
+Point your chosen domains (examples below) to the static IP allocated for the GCE ingress:
+
+```
+vikunja.example.com   A   <STATIC_IP>
+auth.example.com      A   <STATIC_IP>
+```
+
+Then set these environment overrides in the workflow (or via `--set` locally):
+
+```
+KEYCLOAK_HOST=auth.example.com
+VIKUNJA_HOST=vikunja.example.com
+```
+
+The workflow already passes updated redirect URIs and issuer values to both charts. If using TLS (recommended), install cert-manager and add a `tls:` block to the platform ingress chart.
+
+### Testing Login
+1. Browse to `https://vikunja.example.com/` and click login.
+2. You should be redirected to Keycloak at `https://auth.example.com/realms/vikunja/...`.
+3. Authenticate with a Keycloak user (create one via Keycloak admin console at `/admin` if needed).
+4. You are returned to Vikunja with an authenticated session.
+
+### Switching to Confidential Client (Optional)
+If you prefer a confidential client:
+1. Set `openid.confidentialClient=true` in Vikunja values.
+2. Create a secret containing `CLIENT_SECRET` and pass `--set openid.secretName=<secret>`.
+3. Adjust Keycloak client to `publicClient=false` and add the generated secret.
+
+The bootstrap job currently creates only a public client; extend `realm.clients` with a new entry if needed and redeploy.
+
 
 This chart can leverage the External Secrets Operator to source the database password from a secret manager (e.g., Google Secret Manager).
 

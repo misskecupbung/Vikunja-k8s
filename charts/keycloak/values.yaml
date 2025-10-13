@@ -27,17 +27,18 @@ ingress:
   annotations: {}
   tls: []
 
+# Explicit hostname when using shared platform ingress (ingress.enabled=false)
+hostnameOverride: ""
+
 # Realm bootstrap configuration (executed via a Helm post-install/upgrade Job when enabled)
 realm:
-  enabled: false
+  enabled: true
   name: vikunja
-  clients: []
-  # Example:
-  # clients:
-  #   - clientId: vikunja-web
-  #     publicClient: true
-  #     redirectUris:
-  #       - "https://vikunja.example.com/*"
+  clients:
+    - clientId: vikunja-web
+      publicClient: true
+      redirectUris:
+        - "https://vikunja.local/*"
 
 # Post-install Job toggle (realm.enabled controls creation; this is a secondary master switch if desired)
 postInstall:

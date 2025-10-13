@@ -1,0 +1,5 @@
+staticIpName: todo-platform-lb-ip
+hosts:
+  vikunja: vikunja.local
+  keycloak: keycloak.local
+ingressClass: gce
