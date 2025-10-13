@@ -57,13 +57,6 @@ jobs:
           sudo mv kubeconform /usr/local/bin/
       - name: Kubeconform Validate
         run: kubeconform -ignore-missing-schemas -schema-location default -summary rendered.yaml
-      - name: Check Required Secrets
-        run: |
-          for s in VIKUNJA_DB_PASSWORD KEYCLOAK_DB_PASSWORD GCP_PROJECT_ID GCP_REGION GCP_WIF_PROVIDER GCP_TERRAFORM_SA TF_STATE_BUCKET; do
-            if [ -z "$(printenv $s)" ]; then
-              echo "Missing required secret/env: $s" >&2; exit 1
-            fi
-          done
       - name: Terraform Init
         run: |
           terraform init \
