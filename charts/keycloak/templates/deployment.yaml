@@ -59,6 +59,8 @@ spec:
               value: "{{ if .Values.ingress.enabled }}{{ .Values.ingress.host }}{{ end }}"
             - name: JAVA_OPTS_APPEND
               value: "-Xms256m -Xmx768m"
+            - name: KC_FEATURES
+              value: "health"
           ports:
             - containerPort: 8080
           readinessProbe:
@@ -70,10 +72,10 @@ spec:
             failureThreshold: 12
           startupProbe:
             httpGet:
-              path: /health/ready
+              path: /health
               port: 8080
-            failureThreshold: 30
-            periodSeconds: 10
+            failureThreshold: 40
+            periodSeconds: 5
           livenessProbe:
             httpGet:
               path: /health/live
