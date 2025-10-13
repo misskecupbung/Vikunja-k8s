@@ -1,0 +1,29 @@
+# Aggregate production overrides for all charts (copy pieces to per-chart files or use with --values on each release)
+
+platform:
+  hosts:
+    vikunja: vikunja.misskecupbung.xyz
+    keycloak: keycloak.misskecupbung.xyz
+  managedCertificate:
+    name: vikunja-ingress-cert
+    domains:
+      - vikunja.misskecupbung.xyz
+      - keycloak.misskecupbung.xyz
+  staticIpName: todo-platform-lb-ip
+
+keycloak:
+  hostnameOverride: keycloak.misskecupbung.xyz
+  realm:
+    enabled: false   # Enable later if you add bootstrap job
+
+vikunja:
+  ingress:
+    enabled: false
+    host: vikunja.misskecupbung.xyz
+  openid:
+    enabled: true
+    issuer: https://keycloak.misskecupbung.xyz/realms/vikunja
+    clientId: vikunja-web
+    confidentialClient: false
+    redirectURL: https://vikunja.misskecupbung.xyz/
+    scopes: "openid profile email"

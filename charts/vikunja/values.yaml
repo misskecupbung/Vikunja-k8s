@@ -18,12 +18,10 @@ service:
   port: 80
 
 ingress:
-  enabled: true
+  enabled: false          # Disabled; platform shared ingress handles public exposure
   className: "gce"
-  host: vikunja.local
-  annotations:
-    kubernetes.io/ingress.class: "gce"
-    kubernetes.io/ingress.allow-http: "true"
+  host: vikunja.misskecupbung.xyz   # Still used to build VIKUNJA_SERVICE_PUBLICURL env
+  annotations: {}
   tls: []
 
 resources:
@@ -75,13 +73,12 @@ keycloak:
 
 openid:
   enabled: true
-  # issuer must match Keycloak realm URL (will be overridden in workflow for real domain)
-  issuer: "https://keycloak.local/realms/vikunja"
+  issuer: "https://keycloak.misskecupbung.xyz/realms/vikunja"
   clientId: "vikunja-web"
   confidentialClient: false
   secretName: "vikunja-oidc-client"
-  redirectURL: "https://vikunja.local/" # Vikunja will append needed paths
-  scopes: "openid profile email"  # optional additional scopes
+  redirectURL: "https://vikunja.misskecupbung.xyz/"  # Vikunja appends callback paths
+  scopes: "openid profile email"
 
 networkPolicy:
   enabled: true
