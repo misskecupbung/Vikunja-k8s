@@ -3,12 +3,11 @@ kind: Ingress
 metadata:
   name: platform
   annotations:
-    kubernetes.io/ingress.class: "gce"
-    # Set a global static IP name created beforehand (gcloud compute addresses create ... --global)
-    kubernetes.io/ingress.global-static-ip-name: "${PLATFORM_LB_IP_NAME:-todo-platform-lb-ip}"
+  kubernetes.io/ingress.class: "{{ .Values.ingressClass }}"
+  kubernetes.io/ingress.global-static-ip-name: "{{ .Values.staticIpName }}"
 spec:
   rules:
-    - host: ${VIKUNJA_HOST:-vikunja.local}
+    - host: "{{ .Values.hosts.vikunja }}"
       http:
         paths:
           - path: /
@@ -18,7 +17,7 @@ spec:
                 name: vikunja
                 port:
                   number: 80
-    - host: ${KEYCLOAK_HOST:-keycloak.local}
+    - host: "{{ .Values.hosts.keycloak }}"
       http:
         paths:
           - path: /

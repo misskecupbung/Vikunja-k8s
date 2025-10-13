@@ -74,14 +74,13 @@ keycloak:
   issuer: "https://keycloak.example.com/realms/vikunja"
 
 openid:
-  enabled: false
-  # When enabled, set these (issuer must match Keycloak realm URL)
-  issuer: "https://keycloak.example.com/realms/vikunja"
+  enabled: true
+  # issuer must match Keycloak realm URL (will be overridden in workflow for real domain)
+  issuer: "https://keycloak.local/realms/vikunja"
   clientId: "vikunja-web"
-  # secretName should contain a key CLIENT_SECRET if using a confidential client
   confidentialClient: false
   secretName: "vikunja-oidc-client"
-  redirectURL: "https://vikunja.example.com/" # Vikunja will append needed paths
+  redirectURL: "https://vikunja.local/" # Vikunja will append needed paths
   scopes: "openid profile email"  # optional additional scopes
 
 networkPolicy:
