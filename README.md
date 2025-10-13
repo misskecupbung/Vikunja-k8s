@@ -215,4 +215,3 @@ Makefile targets ease local workflows (`make init plan apply helm-template`).
 ## Disclaimer
 
 This is a reference implementation for interview purposes; hard-coded sample values (passwords, hosts) must be replaced with secure secret management and environment-specific overrides before production use.
-
