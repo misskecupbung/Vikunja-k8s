@@ -3,6 +3,10 @@ database:
   name: vikunja
   user: vikunja
 
+cloudsql:
+  enabled: true
+  instanceConnectionName: project:region:vikunja-sql
+
 ingress:
   enabled: true
   className: "gce"

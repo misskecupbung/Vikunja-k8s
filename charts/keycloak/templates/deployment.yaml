@@ -38,7 +38,7 @@ spec:
             - name: KC_DB
               value: postgres
             - name: KC_DB_URL_HOST
-              value: "{{ .Values.database.host }}"
+              value: "{{ if .Values.cloudsql.enabled }}127.0.0.1{{ else }}{{ .Values.database.host }}{{ end }}"
             - name: KC_DB_URL_DATABASE
               value: "{{ .Values.database.name }}"
             - name: KC_DB_USERNAME
@@ -81,3 +81,15 @@ spec:
             limits:
               cpu: 1
               memory: 1.5Gi
+{{- if .Values.cloudsql.enabled }}
+        - name: cloud-sql-proxy
+          image: {{ .Values.cloudsql.image }}
+          command:
+            - /cloud_sql_proxy
+            - -instances={{ .Values.cloudsql.instanceConnectionName }}=tcp:5432
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+          resources:
+{{ toYaml .Values.cloudsql.resources | indent 12 }}
+{{- end }}

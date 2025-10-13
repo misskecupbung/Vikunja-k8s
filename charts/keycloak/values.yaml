@@ -2,6 +2,23 @@ image:
   repository: quay.io/keycloak/keycloak
   tag: 24.0.1
 
+database:
+  host: localhost
+  name: vikunja
+  user: vikunja
+
+cloudsql:
+  enabled: true
+  instanceConnectionName: "" # project:region:instance (filled by CI or override)
+  image: gcr.io/cloudsql-docker/gce-proxy:1.37.0
+  resources:
+    requests:
+      cpu: 20m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
 ingress:
   enabled: false
   host: keycloak.example.com
