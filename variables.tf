@@ -81,3 +81,15 @@ variable "cloudsql_availability_type" {
   default     = "ZONAL"
   description = "Cloud SQL availability type (ZONAL for dev, REGIONAL for HA prod)"
 }
+
+variable "cluster_location" {
+  type        = string
+  default     = null
+  description = "Optional zonal location to create a zonal GKE cluster instead of regional (e.g. us-central1-a). When null, use regional cluster."
+}
+
+variable "gke_disk_size_gb" {
+  type        = number
+  default     = 30
+  description = "GKE node boot disk size in GB (keep small in dev to reduce SSD quota)."
+}

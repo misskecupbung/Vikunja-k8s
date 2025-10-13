@@ -6,6 +6,8 @@ enable_cloudsql = true
 gke_min_nodes    = 1
 gke_max_nodes    = 1
 gke_machine_type = "e2-small" # smaller shared-core for dev
+cluster_location = "us-central1-a" # zonal to reduce regional resource usage
+gke_disk_size_gb = 20
 
 # Cloud SQL sizing (dev)
 cloudsql_tier              = "db-f1-micro"

@@ -76,3 +76,15 @@ variable "labels" {
   default     = {}
   description = "Additional resource labels applied to nodes"
 }
+
+variable "disk_size_gb" {
+  type        = number
+  default     = 100
+  description = "Node boot disk size in GB"
+}
+
+variable "location" {
+  type        = string
+  default     = null
+  description = "Override location (zone) for a zonal cluster instead of regional. When null, region is used for a regional cluster."
+}
