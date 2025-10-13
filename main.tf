@@ -15,6 +15,7 @@ module "gke" {
   cluster_name                  = var.cluster_name
   subnet_name                   = module.network.subnet_name
   network_name                  = var.network_cidr != "" ? "vikunja-vpc" : "vikunja-vpc"
+  location                      = var.cluster_location
   pods_secondary_range_name     = "pods"
   services_secondary_range_name = "services"
   # Reduced footprint for quota: change via tfvars for prod
@@ -22,6 +23,7 @@ module "gke" {
   min_nodes                       = var.gke_min_nodes
   max_nodes                       = var.gke_max_nodes
   machine_type                    = var.gke_machine_type
+  disk_size_gb                   = var.gke_disk_size_gb
   enable_workload_identity        = true
   enable_vertical_pod_autoscaling = false # disable to save overhead in dev
   labels                          = { env = "dev" }
