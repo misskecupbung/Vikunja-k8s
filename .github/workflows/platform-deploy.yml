@@ -22,8 +22,7 @@ env:
   TF_VAR_region: ${{ secrets.GCP_REGION }}
   CLUSTER_NAME: "vikunja-gke"
   CLUSTER_LOCATION: "us-central1-a"
-  # Name of the Cloud SQL instance (set this to match Terraform 'google_sql_database_instance' resource name)
-  CLOUDSQL_INSTANCE: "vikunja-sql"
+  CLOUDSQL_INSTANCE: "vikunja-db"
   
 jobs:
   plan:
