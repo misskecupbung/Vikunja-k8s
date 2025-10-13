@@ -9,8 +9,8 @@ terraform {
 }
 
 resource "google_container_cluster" "this" {
-  name       = var.cluster_name
-  project    = var.project_id
+  name    = var.cluster_name
+  project = var.project_id
   # If a specific zone (var.location) is provided, create a zonal cluster; otherwise regional
   location   = coalesce(var.location, var.region)
   network    = var.network_name
@@ -75,12 +75,12 @@ resource "google_container_node_pool" "primary" {
   }
 
   node_config {
-    preemptible    = false
-    machine_type   = var.machine_type
-    disk_size_gb   = var.disk_size_gb
-    disk_type      = "pd-standard" # reduce SSD quota usage
-    labels         = merge({ "app" = "vikunja" }, var.labels)
-    oauth_scopes   = [
+    preemptible  = false
+    machine_type = var.machine_type
+    disk_size_gb = var.disk_size_gb
+    disk_type    = "pd-standard" # reduce SSD quota usage
+    labels       = merge({ "app" = "vikunja" }, var.labels)
+    oauth_scopes = [
       "https://www.googleapis.com/auth/cloud-platform"
     ]
     metadata = {
