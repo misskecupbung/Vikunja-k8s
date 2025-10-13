@@ -22,6 +22,8 @@ env:
   TF_VAR_region: ${{ secrets.GCP_REGION }}
   CLUSTER_NAME: "vikunja-gke"
   CLUSTER_LOCATION: "us-central1-a"
+  # Name of the Cloud SQL instance (set this to match Terraform 'google_sql_database_instance' resource name)
+  CLOUDSQL_INSTANCE: "vikunja-sql"
   
 jobs:
   plan:
@@ -165,13 +167,13 @@ jobs:
 
       - name: Helm Deploy Keycloak
         run: |
-          # Obtain Cloud SQL public IP from Terraform state
-          terraform init -backend=false >/dev/null 2>&1 || true
-          # Select workspace to ensure outputs read from correct state path if using workspaces remotely
-          terraform workspace select ${WORKSPACE} 2>/dev/null || true
-          DB_HOST=$(terraform output -raw cloudsql_public_ip || echo "")
+          # Retrieve Cloud SQL public IP using gcloud (no terraform needed in this job)
+          if [ -z "${CLOUDSQL_INSTANCE}" ]; then
+            echo "CLOUDSQL_INSTANCE env var not set" >&2; exit 1
+          fi
+          DB_HOST=$(gcloud sql instances describe "${CLOUDSQL_INSTANCE}" --format="value(ipAddresses[0].ipAddress)" || true)
           if [ -z "$DB_HOST" ]; then
-            echo "Failed to obtain cloudsql_public_ip terraform output" >&2; exit 1
+            echo "Failed to obtain public IP for instance ${CLOUDSQL_INSTANCE}" >&2; exit 1
           fi
           echo "Using Cloud SQL host: $DB_HOST"
           helm upgrade --install keycloak charts/keycloak -f charts/keycloak/values-ci.yaml \
