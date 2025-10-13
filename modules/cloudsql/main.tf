@@ -57,14 +57,14 @@ resource "google_sql_user" "user" {
 
 # Optional Keycloak dedicated database & user (created only if variables provided)
 resource "google_sql_database" "keycloak" {
-  count    = var.keycloak_db_name != null && var.keycloak_db_user != null && var.keycloak_db_password != null ? 1 : 0
+  count    = var.keycloak_db_name != null ? 1 : 0
   name     = var.keycloak_db_name
   instance = google_sql_database_instance.this.name
   project  = var.project_id
 }
 
 resource "google_sql_user" "keycloak" {
-  count    = var.keycloak_db_name != null && var.keycloak_db_user != null && var.keycloak_db_password != null ? 1 : 0
+  count    = var.keycloak_db_user != null && var.keycloak_db_password != null ? 1 : 0
   name     = var.keycloak_db_user
   instance = google_sql_database_instance.this.name
   project  = var.project_id
