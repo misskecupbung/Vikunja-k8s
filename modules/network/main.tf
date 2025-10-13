@@ -17,11 +17,11 @@ resource "google_compute_network" "this" {
 }
 
 resource "google_compute_subnetwork" "this" {
-  name                  = var.subnet_name
-  project               = var.project_id
-  ip_cidr_range         = var.subnet_cidr
-  region                = var.region
-  network               = google_compute_network.this.id
+  name                     = var.subnet_name
+  project                  = var.project_id
+  ip_cidr_range            = var.subnet_cidr
+  region                   = var.region
+  network                  = google_compute_network.this.id
   private_ip_google_access = true
 
   secondary_ip_range {

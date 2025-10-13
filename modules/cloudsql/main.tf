@@ -9,14 +9,14 @@ terraform {
 }
 
 resource "google_sql_database_instance" "this" {
-  name             = var.instance_name
-  project          = var.project_id
-  region           = var.region
-  database_version = "POSTGRES_15"
+  name                = var.instance_name
+  project             = var.project_id
+  region              = var.region
+  database_version    = "POSTGRES_15"
   deletion_protection = var.deletion_protection
 
   settings {
-    tier = var.db_tier
+    tier              = var.db_tier
     availability_type = var.availability_type
     disk_autoresize   = true
     backup_configuration {

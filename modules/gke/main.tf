@@ -9,9 +9,9 @@ terraform {
 }
 
 resource "google_container_cluster" "this" {
-  name     = var.cluster_name
-  project  = var.project_id
-  location = var.region
+  name       = var.cluster_name
+  project    = var.project_id
+  location   = var.region
   network    = var.network_name
   subnetwork = var.subnet_name
 

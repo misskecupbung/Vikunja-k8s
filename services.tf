@@ -6,7 +6,7 @@ resource "google_project_service" "required" {
     "iam.googleapis.com",
     "servicenetworking.googleapis.com"
   ])
-  project = var.project_id
-  service = each.value
+  project            = var.project_id
+  service            = each.value
   disable_on_destroy = false
 }
