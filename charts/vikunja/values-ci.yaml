@@ -1,6 +1,3 @@
-# CI deployment overrides for Vikunja (non-secret)
-# Dynamic pieces (DB password, Cloud SQL IP, instance connection name) are passed via --set in the workflow.
-
 replicaCount: 1
 
 ingress:
@@ -21,12 +18,12 @@ resources:
 
 cloudsql:
   enabled: false
-  instanceConnectionName: ""  # injected via --set cloudsql.instanceConnectionName=...
+  instanceConnectionName: "" 
 
 postgres:
-  host: ""   # injected via --set postgres.host=...
+  host: ""
   user: vikunja
-  password: "" # injected via --set postgres.password=...
+  password: ""
   database: vikunja
 
 keycloak:

@@ -32,6 +32,10 @@ env:
   CLOUDSQL_INSTANCE: "vikunja-db"
   KEYCLOAK_ADMIN_USER: "admin"
   KEYCLOAK_ADMIN_PASSWORD: "admin"  # override with secret if desired
+  # Shared ingress configuration
+  PLATFORM_LB_IP_NAME: "todo-platform-lb-ip"   # Must exist or will be created outside (global static IP)
+  KEYCLOAK_HOST: "keycloak.local"
+  VIKUNJA_HOST: "vikunja.local"
   
 jobs:
   plan:
@@ -173,6 +177,7 @@ jobs:
           if ! helm upgrade --install keycloak charts/keycloak -f charts/keycloak/values-ci.yaml \
             --set database.host=$DB_HOST \
             --set cloudsql.enabled=false \
+            --set ingress.enabled=false \
             --wait --timeout 10m; then
             echo "Helm install/upgrade failed; dumping pod diagnostics:" >&2
             kubectl get pods -l app=keycloak -o wide || true
@@ -221,8 +226,21 @@ jobs:
           set -e
           if ! helm upgrade --install vikunja charts/vikunja -f charts/vikunja/values-ci.yaml \
             --set cloudsql.enabled=false \
+            --set ingress.enabled=false \
             --set postgres.host=$DB_HOST \
             --wait --timeout 10m; then
+      - name: Apply Shared Ingress
+        run: |
+          # Render platform ingress substituting env vars (simple envsubst pattern)
+          sed "s/\\${VIKUNJA_HOST}/${VIKUNJA_HOST}/g; s/\\${KEYCLOAK_HOST}/${KEYCLOAK_HOST}/g; s/\\${PLATFORM_LB_IP_NAME}/${PLATFORM_LB_IP_NAME}/g" platform-ingress.yaml | kubectl apply -f -
+          echo "Waiting for Ingress IP..."
+          for i in {1..30}; do
+            IP=$(kubectl get ingress platform -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)
+            [ -n "$IP" ] && echo "Ingress IP: $IP" && break
+            sleep 10
+          done
+          if [ -z "$IP" ]; then
+            echo "Ingress did not obtain an IP in time" >&2; kubectl describe ingress platform; exit 1; fi
             echo "Helm install/upgrade failed; dumping pod diagnostics:" >&2
             kubectl get pods -l app=vikunja -o wide || true
             kubectl describe pods -l app=vikunja || true
