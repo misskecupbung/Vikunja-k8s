@@ -7,3 +7,6 @@ ingressClass: gce
 managedCertificate:
   enabled: true
   name: platform-cert
+  domains:
+    - vikunja.misskecupbung.xyz
+    - keycloak.misskecupbung.xyz
