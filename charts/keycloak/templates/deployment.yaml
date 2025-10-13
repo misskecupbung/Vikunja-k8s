@@ -23,6 +23,7 @@ spec:
             - start
             - --http-enabled=true
             - --hostname-strict=false
+            - --proxy=edge
             - --cache=local
             - --health-enabled=true
           env:
@@ -61,6 +62,8 @@ spec:
               value: "-Xms256m -Xmx768m"
             - name: KC_HEALTH_ENABLED
               value: "true"
+            - name: KC_HOSTNAME_STRICT_HTTPS
+              value: "false"
           ports:
             - containerPort: 8080
           startupProbe:
