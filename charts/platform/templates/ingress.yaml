@@ -4,8 +4,8 @@ metadata:
   name: platform
   annotations:
     kubernetes.io/ingress.class: "{{ .Values.ingressClass }}"
-  kubernetes.io/ingress.global-static-ip-name: "{{ .Values.staticIpName }}"
-  networking.gke.io/managed-certificates: "{{ .Values.managedCertificate.name }}"
+    kubernetes.io/ingress.global-static-ip-name: "{{ .Values.staticIpName }}"
+    networking.gke.io/managed-certificates: "{{ .Values.managedCertificate.name }}"
 spec:
   rules:
     - host: "{{ .Values.hosts.vikunja }}"
