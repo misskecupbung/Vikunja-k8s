@@ -1,5 +1,9 @@
 name: Terraform Apply Workflow
 
+concurrency:
+  group: terraform-${{ github.ref }}
+  cancel-in-progress: false
+
 on:
   push:
     branches:
@@ -100,28 +104,6 @@ jobs:
         with:
           name: terraform-plan-${{ env.TF_WORKSPACE }}
           path: plan.out
-
-  manual-approval:
-    name: Manual Approval
-    runs-on: ubuntu-latest
-    needs: terraform-plan
-    if: success() && github.ref == 'refs/heads/main'
-    permissions:
-      issues: write
-      contents: read
-    steps:
-      - name: Await Manual Approval
-        uses: trstringer/manual-approval@v1
-        with:
-          secret: ${{ github.TOKEN }}
-          approvers: misskecupbung
-          minimum-approvals: 1
-          issue-title: "Manual Approval Required for Terraform Apply (workspace: ${{ needs.terraform-plan.outputs.workspace }})"
-          issue-body: |
-            Please approve or deny the deployment.
-            Workspace: ${{ needs.terraform-plan.outputs.workspace }}
-            Plan artifact: terraform-plan-${{ needs.terraform-plan.outputs.workspace }}
-            (Secret sourced from GitHub Actions secret VIKUNJA_DB_PASSWORD)
 
   terraform-apply:
     name: Terraform Apply
