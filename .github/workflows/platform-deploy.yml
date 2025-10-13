@@ -60,9 +60,14 @@ jobs:
         name: Select Workspace
         run: |
           WS=$([[ "${{ github.ref }}" == "refs/heads/main" ]] && echo prod || echo dev)
-          echo "Using workspace: $WS"
-          terraform workspace new $WS || true
-          terraform workspace select $WS
+          echo "Target workspace: $WS"
+          if terraform workspace select "$WS" >/dev/null 2>&1; then
+            echo "Workspace $WS selected (already existed)"
+          else
+            echo "Workspace $WS does not exist; creating"
+            terraform workspace new "$WS"
+            terraform workspace select "$WS"
+          fi
           echo "workspace=$WS" >> "$GITHUB_OUTPUT"
           echo "TF_WORKSPACE=$WS" >> $GITHUB_ENV
       - name: Validate Terraform
@@ -100,7 +105,7 @@ jobs:
       - name: Select Workspace
         run: terraform workspace select ${{ needs.plan.outputs.workspace }}
 
-      - name: Await Prod Approval
+      - name: Await Prod Approval (Production)
         if: github.ref == 'refs/heads/main'
         uses: trstringer/manual-approval@v1
         with:
