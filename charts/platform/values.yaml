@@ -6,7 +6,7 @@ ingressClass: gce
   # Adding managed certificate support
 managedCertificate:
   enabled: true
-  name: vikunja-cert
+  name: vikunja-ingress-cert
   domains:
     - vikunja.misskecupbung.xyz
     - keycloak.misskecupbung.xyz
