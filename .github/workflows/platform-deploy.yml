@@ -164,7 +164,19 @@ jobs:
           kubectl create secret generic keycloak-db --from-literal=password='${{ secrets.KEYCLOAK_DB_PASSWORD }}' --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Helm Deploy Keycloak
-        run: helm upgrade --install keycloak charts/keycloak -f charts/keycloak/values-ci.yaml --wait --timeout 5m
+        run: |
+          # Obtain Cloud SQL public IP from Terraform state
+          terraform init -backend=false >/dev/null 2>&1 || true
+          # Select workspace to ensure outputs read from correct state path if using workspaces remotely
+          terraform workspace select ${WORKSPACE} 2>/dev/null || true
+          DB_HOST=$(terraform output -raw cloudsql_public_ip || echo "")
+          if [ -z "$DB_HOST" ]; then
+            echo "Failed to obtain cloudsql_public_ip terraform output" >&2; exit 1
+          fi
+          echo "Using Cloud SQL host: $DB_HOST"
+          helm upgrade --install keycloak charts/keycloak -f charts/keycloak/values-ci.yaml \
+            --set database.host=$DB_HOST \
+            --wait --timeout 5m
 
   deploy-vikunja:
     name: Deploy Vikunja

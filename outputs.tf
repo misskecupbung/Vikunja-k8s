@@ -17,3 +17,8 @@ output "cloudsql_instance" {
   value       = try(module.cloudsql[0].instance_connection_name, null)
   description = "Cloud SQL instance connection name or null if disabled"
 }
+
+output "cloudsql_public_ip" {
+  value       = try(module.cloudsql[0].public_ip_address, null)
+  description = "Cloud SQL public IPv4 address (null if private or disabled)"
+}

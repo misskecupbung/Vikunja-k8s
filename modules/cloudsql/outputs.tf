@@ -12,3 +12,8 @@ output "db_user" {
   value       = google_sql_user.user.name
   description = "Database user"
 }
+
+output "public_ip_address" {
+  value       = try(google_sql_database_instance.this.public_ip_address, null)
+  description = "Public IPv4 address of the Cloud SQL instance (null if disabled)"
+}

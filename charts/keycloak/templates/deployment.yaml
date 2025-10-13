@@ -48,14 +48,14 @@ spec:
                 secretKeyRef:
                   name: keycloak-db
                   key: password
+            - name: KC_DB_URL_PROPERTIES
+              value: '{{ default "" .Values.database.parameters }}'
             - name: KC_PROXY
               value: edge
             - name: KC_HTTP_RELATIVE_PATH
               value: /
-            {{- if .Values.ingress.enabled }}
             - name: KC_HOSTNAME
-              value: "{{ .Values.ingress.host }}"
-            {{- end }}
+              value: "{{ if .Values.ingress.enabled }}{{ .Values.ingress.host }}{{ end }}"
             - name: JAVA_OPTS_APPEND
               value: "-Xms256m -Xmx768m"
           ports:
@@ -79,17 +79,6 @@ spec:
               cpu: 200m
               memory: 512Mi
             limits:
-              cpu: 1
+              cpu: "1"
               memory: 1.5Gi
-{{- if .Values.cloudsql.enabled }}
-        - name: cloud-sql-proxy
-          image: {{ .Values.cloudsql.image }}
-          command:
-            - /cloud_sql_proxy
-            - -instances={{ .Values.cloudsql.instanceConnectionName }}=tcp:5432
-          securityContext:
-            runAsNonRoot: true
-            runAsUser: 65534
-          resources:
-{{ toYaml .Values.cloudsql.resources | indent 12 }}
-{{- end }}
+  # Cloud SQL proxy sidecar optional; removed when cloudsql.enabled=false

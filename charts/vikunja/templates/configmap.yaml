@@ -13,10 +13,10 @@ data:
       database: {{ .Values.postgres.database }}
     auth:
       openid:
-        enabled: {{ .Values.keycloak.enabled }}
+        enabled: {{ .Values.openid.enabled }}
         providers:
           - name: keycloak
-            authurl: {{ .Values.keycloak.issuer }}/protocol/openid-connect/auth
-            tokenurl: {{ .Values.keycloak.issuer }}/protocol/openid-connect/token
-            clientid: vikunja-frontend
-            clientsecret: ""
+            authurl: {{ .Values.openid.issuer }}/protocol/openid-connect/auth
+            tokenurl: {{ .Values.openid.issuer }}/protocol/openid-connect/token
+            clientid: {{ .Values.openid.clientId }}
+            clientsecret: {{ if and .Values.openid.confidentialClient .Values.openid.secretName }}"${VIKUNJA_AUTH_OPENID_CLIENTSECRET}"{{ else }}""{{ end }}
