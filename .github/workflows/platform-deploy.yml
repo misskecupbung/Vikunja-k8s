@@ -89,6 +89,8 @@ jobs:
     name: Terraform Apply
     runs-on: ubuntu-latest
     needs: plan
+    env:
+      WORKSPACE: ${{ needs.plan.outputs.workspace }}
     steps:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3
@@ -117,7 +119,7 @@ jobs:
             -backend-config="prefix=terraform"
 
       - name: Select Workspace
-        run: terraform workspace select ${{ needs.plan.outputs.workspace }}
+        run: terraform workspace select ${WORKSPACE}
 
       - name: Await Prod Approval (Production)
         if: github.ref == 'refs/heads/main'
@@ -130,13 +132,15 @@ jobs:
           issue-body: "Approve to apply Terraform to production workspace."
 
       - name: Terraform Apply
-        run: terraform apply -input=false -auto-approve -var-file=environments/${{ needs.plan.outputs.workspace }}.tfvars
+        run: terraform apply -input=false -auto-approve -var-file=environments/${WORKSPACE}.tfvars
 
   deploy-keycloak:
     name: Deploy Keycloak
     runs-on: ubuntu-latest
     needs: apply
     if: github.ref != 'refs/heads/main'
+    env:
+      WORKSPACE: ${{ needs.plan.outputs.workspace }}
     steps:
       - uses: actions/checkout@v4
       - uses: google-github-actions/auth@v3
@@ -150,7 +154,9 @@ jobs:
           echo "USE_GKE_GCLOUD_AUTH_PLUGIN=True" >> $GITHUB_ENV
           CLUSTER_NAME="vikunja-gke"
           REGION="${{ env.TF_VAR_region }}"
-          ZONE_LINE=$(grep -E '^cluster_location' environments/${{ needs.plan.outputs.workspace }}.tfvars || true)
+          if [ -z "${WORKSPACE}" ]; then echo "Workspace output empty, defaulting to dev"; WORKSPACE=dev; fi
+          if [ ! -f "environments/${WORKSPACE}.tfvars" ]; then echo "Missing environments/${WORKSPACE}.tfvars" >&2; exit 1; fi
+          ZONE_LINE=$(grep -E '^cluster_location' environments/${WORKSPACE}.tfvars || true)
           if [ -n "$ZONE_LINE" ]; then
             ZONE=$(echo "$ZONE_LINE" | awk -F'"' '{print $2}')
             gcloud container clusters get-credentials "$CLUSTER_NAME" --zone "$ZONE" --project "$GOOGLE_PROJECT"
@@ -176,6 +182,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: deploy-keycloak
     if: github.ref != 'refs/heads/main'
+    env:
+      WORKSPACE: ${{ needs.plan.outputs.workspace }}
     steps:
       - uses: actions/checkout@v4
       - uses: google-github-actions/auth@v3
@@ -189,7 +197,9 @@ jobs:
           echo "USE_GKE_GCLOUD_AUTH_PLUGIN=True" >> $GITHUB_ENV
           CLUSTER_NAME="vikunja-gke"
           REGION="${{ env.TF_VAR_region }}"
-          ZONE_LINE=$(grep -E '^cluster_location' environments/${{ needs.plan.outputs.workspace }}.tfvars || true)
+          if [ -z "${WORKSPACE}" ]; then echo "Workspace output empty, defaulting to dev"; WORKSPACE=dev; fi
+          if [ ! -f "environments/${WORKSPACE}.tfvars" ]; then echo "Missing environments/${WORKSPACE}.tfvars" >&2; exit 1; fi
+          ZONE_LINE=$(grep -E '^cluster_location' environments/${WORKSPACE}.tfvars || true)
           if [ -n "$ZONE_LINE" ]; then
             ZONE=$(echo "$ZONE_LINE" | awk -F'"' '{print $2}')
             gcloud container clusters get-credentials "$CLUSTER_NAME" --zone "$ZONE" --project "$GOOGLE_PROJECT"
