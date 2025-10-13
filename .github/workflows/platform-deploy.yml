@@ -102,14 +102,6 @@ jobs:
         with:
           workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
           service_account: ${{ secrets.GCP_TERRAFORM_SA }}
-      - uses: google-github-actions/setup-gcloud@v3
-      - name: Check Required Secrets
-        run: |
-          for s in VIKUNJA_DB_PASSWORD KEYCLOAK_DB_PASSWORD GCP_PROJECT_ID GCP_REGION GCP_WIF_PROVIDER GCP_TERRAFORM_SA TF_STATE_BUCKET; do
-            if [ -z "$(printenv $s)" ]; then
-              echo "Missing required secret/env: $s" >&2; exit 1
-            fi
-          done
 
       - name: Terraform Init
         run: |
