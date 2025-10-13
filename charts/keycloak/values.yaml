@@ -6,7 +6,7 @@ database:
   host: 0.0.0.0            # Overridden via --set database.host=<cloudsql_public_ip>
   name: keycloak
   user: keycloak
-  parameters: "sslmode=require"  # Additional JDBC parameters
+  parameters: "?sslmode=require"  # Additional JDBC parameters (prefixed with '?' for proper URL formatting)
 
 cloudsql:
   enabled: false            # Direct mode default; enable for proxy approach
