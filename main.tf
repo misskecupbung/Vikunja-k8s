@@ -37,9 +37,13 @@ module "cloudsql" {
   instance_name = "vikunja-db"
   # Smaller tier for development to fit quota (1 vCPU, 1.7GB approx)
   db_tier             = var.cloudsql_tier
-  database_name       = "vikunja"
-  db_user             = "vikunja"
-  db_password         = var.db_password
+  database_name       = var.vikunja_db_name
+  db_user             = var.vikunja_db_user
+  db_password         = coalesce(var.vikunja_db_password, var.db_password)
   availability_type   = var.cloudsql_availability_type
   deletion_protection = false
+  authorized_networks = var.authorized_networks
+  keycloak_db_name    = var.keycloak_db_name
+  keycloak_db_user    = var.keycloak_db_user
+  keycloak_db_password= var.keycloak_db_password
 }

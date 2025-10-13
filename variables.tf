@@ -48,7 +48,27 @@ variable "enable_cloudsql" {
 variable "db_password" {
   type        = string
   sensitive   = true
-  description = "Database password (supply via TF_VAR_db_password env or secret manager; no default)"
+  default     = null
+  description = "(Deprecated) Use vikunja_db_password instead. Retained for backward compatibility."
+}
+
+variable "vikunja_db_password" {
+  type        = string
+  sensitive   = true
+  description = "Password for the primary Vikunja application database user (supply via TF_VAR_vikunja_db_password)."
+}
+
+# Primary Vikunja application database logical name & user (allows changing from default 'vikunja')
+variable "vikunja_db_name" {
+  type        = string
+  default     = "vikunja"
+  description = "Primary Vikunja database name within the Cloud SQL instance"
+}
+
+variable "vikunja_db_user" {
+  type        = string
+  default     = "vikunja"
+  description = "Primary Vikunja database user"
 }
 
 # Sizing variables (override in per-environment tfvars)
@@ -92,4 +112,33 @@ variable "gke_disk_size_gb" {
   type        = number
   default     = 30
   description = "GKE node boot disk size in GB (keep small in dev to reduce SSD quota)."
+}
+
+variable "authorized_networks" {
+  type = list(object({
+    name  = string
+    value = string
+  }))
+  default     = []
+  description = "Authorized public CIDR networks for Cloud SQL (passed through to module). Keep empty or narrow; avoid 0.0.0.0/0 in prod." 
+}
+
+# Keycloak dedicated database configuration
+variable "keycloak_db_name" {
+  type        = string
+  default     = "keycloak" # corrected spelling
+  description = "Dedicated Keycloak database name on the shared Cloud SQL instance"
+}
+
+variable "keycloak_db_user" {
+  type        = string
+  default     = "keycloak"
+  description = "Dedicated Keycloak database user name"
+}
+
+variable "keycloak_db_password" {
+  type        = string
+  sensitive   = true
+  default     = null
+  description = "Password for the Keycloak DB user (supply via TF_VAR_keycloak_db_password). If null, Terraform will not attempt to manage the user password (manual)."
 }

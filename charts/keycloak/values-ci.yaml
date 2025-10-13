@@ -1,7 +1,7 @@
 database:
-  host: vikunja-db.public-ip-or-dns   # Replaced in CI pipeline with terraform output cloudsql_public_ip
-  name: vikunja
-  user: vikunja
+  host: vikunja-db.public-ip-or-dns   # Replaced in CI pipeline with gcloud-derived Cloud SQL public IP
+  name: keycloak                       # Dedicated Keycloak DB (managed via Terraform)
+  user: keycloak                       # Dedicated Keycloak DB user
   parameters: "sslmode=require"
 
 cloudsql:

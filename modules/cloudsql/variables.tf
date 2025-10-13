@@ -70,3 +70,23 @@ variable "authorized_networks" {
   default     = []
   description = "List of authorized public CIDR networks to allow (public IPv4). Use narrow ranges; avoid 0.0.0.0/0 in production."
 }
+
+# Optional secondary (Keycloak) database & user
+variable "keycloak_db_name" {
+  type        = string
+  default     = null
+  description = "If set, create a dedicated Keycloak database on the same instance"
+}
+
+variable "keycloak_db_user" {
+  type        = string
+  default     = null
+  description = "If set with keycloak_db_name, create a Keycloak DB user"
+}
+
+variable "keycloak_db_password" {
+  type        = string
+  default     = null
+  sensitive   = true
+  description = "Password for the Keycloak DB user (if managing via Terraform)"
+}

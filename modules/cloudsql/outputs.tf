@@ -17,3 +17,13 @@ output "public_ip_address" {
   value       = try(google_sql_database_instance.this.public_ip_address, null)
   description = "Public IPv4 address of the Cloud SQL instance (null if disabled)"
 }
+
+output "keycloak_db_name" {
+  value       = try(google_sql_database.keycloak[0].name, null)
+  description = "Dedicated Keycloak database name (null if not created)"
+}
+
+output "keycloak_db_user" {
+  value       = try(google_sql_user.keycloak[0].name, null)
+  description = "Dedicated Keycloak database user (null if not created)"
+}
