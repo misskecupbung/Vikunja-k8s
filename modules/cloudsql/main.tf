@@ -31,6 +31,13 @@ resource "google_sql_database_instance" "this" {
       # For dev simplicity we enable public IPv4; set to false and supply private_network for production
       ipv4_enabled    = var.enable_public_ip
       private_network = var.private_network
+      dynamic "authorized_networks" {
+        for_each = var.authorized_networks
+        content {
+          name  = authorized_networks.value.name
+          value = authorized_networks.value.value
+        }
+      }
     }
   }
 }
