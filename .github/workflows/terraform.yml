@@ -43,6 +43,33 @@ jobs:
       - name: Setup gcloud
         uses: google-github-actions/setup-gcloud@v2
 
+      - name: Fetch DB password from Secret Manager with retry
+        run: |
+          set -euo pipefail
+          SECRET_NAME="vikunja-db-password"
+          PROJECT="${{ secrets.GCP_PROJECT_ID }}"
+          MAX_ATTEMPTS=5
+          SLEEP_SECONDS=30
+
+          for i in $(seq 1 $MAX_ATTEMPTS); do
+            echo "Attempt $i to access secret..."
+            if PASSWORD=$(gcloud secrets versions access latest --secret="$SECRET_NAME" --project "$PROJECT" 2>/tmp/secret_err); then
+              echo "::add-mask::$PASSWORD"
+              echo "TF_VAR_db_password=$PASSWORD" >> "$GITHUB_ENV"
+              echo "Secret fetched successfully!"
+              break
+            else
+              echo "Failed to fetch secret: $(cat /tmp/secret_err)"
+              if [ $i -lt $MAX_ATTEMPTS ]; then
+                echo "Retrying in $SLEEP_SECONDS seconds..."
+                sleep $SLEEP_SECONDS
+              else
+                echo "FATAL: Unable to fetch secret after $MAX_ATTEMPTS attempts."
+                exit 1
+              fi
+            fi
+          done
+
       - name: Fetch DB password from Secret Manager
         run: |
           echo "TF_VAR_db_password=$(gcloud secrets versions access latest --secret=vikunja-db-password --project ${{ secrets.GCP_PROJECT_ID }})" >> $GITHUB_ENV
