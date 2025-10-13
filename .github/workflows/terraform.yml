@@ -3,7 +3,13 @@ name: Terraform Apply Workflow
 on:
   push:
     branches:
-      - main
+      - main          # production
+      - dev           # shared dev branch
+      - feature/**    # any feature branches (nested)
+  pull_request:
+    branches:
+      - main          # PRs into main still run plan (no auto-apply)
+  workflow_dispatch:   # manual trigger
 
 permissions:
   contents: read
@@ -99,7 +105,7 @@ jobs:
     name: Manual Approval
     runs-on: ubuntu-latest
     needs: terraform-plan
-    if: success()
+    if: success() && github.ref == 'refs/heads/main'
     permissions:
       issues: write
       contents: read
@@ -120,7 +126,7 @@ jobs:
   terraform-apply:
     name: Terraform Apply
     runs-on: ubuntu-latest
-    needs: [manual-approval, terraform-plan]
+    needs: [terraform-plan]
     permissions:
       contents: read
       id-token: write
@@ -159,4 +165,17 @@ jobs:
           terraform workspace select $WS
           echo "TF_WORKSPACE=$WS" >> $GITHUB_ENV
       - name: Terraform Apply
+        if: github.ref != 'refs/heads/main'
+        run: terraform apply -input=false -auto-approve -var-file=environments/$TF_WORKSPACE.tfvars
+      - name: Await Prod Approval Apply
+        if: github.ref == 'refs/heads/main'
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ github.TOKEN }}
+          approvers: misskecupbung
+          minimum-approvals: 1
+          issue-title: "Prod Apply Approval (workspace: ${{ needs.terraform-plan.outputs.workspace }})"
+          issue-body: "Approve to apply Terraform to production workspace."
+      - name: Terraform Apply (Prod)
+        if: github.ref == 'refs/heads/main'
         run: terraform apply -input=false -auto-approve -var-file=environments/$TF_WORKSPACE.tfvars

@@ -49,3 +49,15 @@ variable "deletion_protection" {
   default     = false
   description = "Enable to prevent accidental instance deletion"
 }
+
+variable "enable_public_ip" {
+  type        = bool
+  default     = true
+  description = "Enable a public IPv4 address for the instance (dev convenience). Disable and use private_network in prod."
+}
+
+variable "private_network" {
+  type        = string
+  default     = null
+  description = "Self-link of the VPC network for private IP (when enable_public_ip=false)."
+}

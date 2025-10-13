@@ -28,8 +28,9 @@ resource "google_sql_database_instance" "this" {
       hour = 3
     }
     ip_configuration {
-      ipv4_enabled    = false
-      private_network = null # Expect usage of Cloud SQL Proxy for now
+      # For dev simplicity we enable public IPv4; set to false and supply private_network for production
+      ipv4_enabled    = var.enable_public_ip
+      private_network = var.private_network
     }
   }
 }
