@@ -61,3 +61,12 @@ variable "private_network" {
   default     = null
   description = "Self-link of the VPC network for private IP (when enable_public_ip=false)."
 }
+
+variable "authorized_networks" {
+  type = list(object({
+    name  = string
+    value = string
+  }))
+  default     = []
+  description = "List of authorized public CIDR networks to allow (public IPv4). Use narrow ranges; avoid 0.0.0.0/0 in production."
+}
