@@ -23,6 +23,8 @@ env:
   CLUSTER_NAME: "vikunja-gke"
   CLUSTER_LOCATION: "us-central1-a"
   CLOUDSQL_INSTANCE: "vikunja-db"
+  KEYCLOAK_ADMIN_USER: "admin"
+  KEYCLOAK_ADMIN_PASSWORD: "admin"  # override with secret if desired
   
 jobs:
   plan:
@@ -161,7 +163,13 @@ jobs:
       - name: Create Keycloak Secrets
         run: |
           if [ -z "${{ secrets.KEYCLOAK_DB_PASSWORD }}" ]; then echo "Missing KEYCLOAK_DB_PASSWORD secret" >&2; exit 1; fi
-          kubectl create secret generic keycloak-admin --from-literal=password=admin --dry-run=client -o yaml | kubectl apply -f -
+          # Prefer GitHub secrets for admin creds if provided
+          ADMIN_USER=${{ secrets.KEYCLOAK_ADMIN_USER || env.KEYCLOAK_ADMIN_USER }}
+          ADMIN_PASS=${{ secrets.KEYCLOAK_ADMIN_PASSWORD || env.KEYCLOAK_ADMIN_PASSWORD }}
+          kubectl create secret generic keycloak-admin \
+            --from-literal=username="${ADMIN_USER}" \
+            --from-literal=password="${ADMIN_PASS}" \
+            --dry-run=client -o yaml | kubectl apply -f -
           kubectl create secret generic keycloak-db --from-literal=password='${{ secrets.KEYCLOAK_DB_PASSWORD }}' --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Helm Deploy Keycloak
@@ -175,9 +183,17 @@ jobs:
             echo "Failed to obtain public IP for instance ${CLOUDSQL_INSTANCE}" >&2; exit 1
           fi
           echo "Using Cloud SQL host: $DB_HOST"
-          helm upgrade --install keycloak charts/keycloak -f charts/keycloak/values-ci.yaml \
+          set -e
+          if ! helm upgrade --install keycloak charts/keycloak -f charts/keycloak/values-ci.yaml \
             --set database.host=$DB_HOST \
-            --wait --timeout 5m
+            --set cloudsql.enabled=false \
+            --wait --timeout 10m; then
+            echo "Helm install/upgrade failed; dumping pod diagnostics:" >&2
+            kubectl get pods -l app=keycloak -o wide || true
+            kubectl describe pods -l app=keycloak || true
+            kubectl logs -l app=keycloak --all-containers --tail=200 || true
+            exit 1
+          fi
 
   deploy-vikunja:
     name: Deploy Vikunja
