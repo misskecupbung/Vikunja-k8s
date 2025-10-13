@@ -4,8 +4,6 @@ image:
 
 database:
   host: 0.0.0.0            # Overridden via --set database.host=<cloudsql_public_ip>
-  # Dedicated Keycloak database & user (manually created). Note the current spelling 'keycloack'.
-  # If you later recreate as 'keycloak', update both name & user here and redeploy.
   name: keycloak
   user: keycloak
   parameters: "sslmode=require"  # Additional JDBC parameters
