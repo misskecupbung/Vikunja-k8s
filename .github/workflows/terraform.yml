@@ -67,7 +67,12 @@ jobs:
           else
             echo "Secret Manager fetch failed (details):"; cat /tmp/secret_err || true
             echo "No GitHub fallback provided; generating ephemeral password (NOT FOR PROD)."; FALLBACK_FLAG=2
-            PASSWORD=$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 24)
+            # Avoid piping to head (causes broken pipe under set -euo pipefail)
+            # Generate 48 bytes base64 then strip non-alphanumerics and cut to 24 chars
+            PASSWORD=$(openssl rand -base64 48 | tr -dc 'A-Za-z0-9' | cut -c1-24)
+          fi
+          if [ "$FALLBACK_FLAG" = "2" ]; then
+            echo "WARNING: Ephemeral password generated. Create Secret Manager secret '$SECRET_NAME' to eliminate this path." >&2
           fi
           echo "::add-mask::$PASSWORD"
           echo "TF_VAR_db_password=$PASSWORD" >> "$GITHUB_ENV"
