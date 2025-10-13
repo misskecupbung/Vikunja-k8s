@@ -46,8 +46,7 @@ variable "enable_cloudsql" {
 }
 
 variable "db_password" {
-	type        = string
-	default     = "ChangeMe123!"
-	sensitive   = true
-	description = "Database password (demo default, replace via tfvars or secret)"
+  type        = string
+  sensitive   = true
+  description = "Database password (supply via TF_VAR_db_password env or secret manager; no default)"
 }

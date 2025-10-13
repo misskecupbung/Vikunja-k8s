@@ -103,6 +103,7 @@ Add these GitHub repository secrets:
 ### 3. Initialize & deploy locally (dev)
 
 ```
+export TF_VAR_db_password="$(openssl rand -base64 20)" # or export from a secret manager
 terraform init -backend-config="bucket=$PROJECT_ID-tf-state" -backend-config="prefix=terraform/dev"
 terraform plan -var-file=environments/dev.tfvars
 terraform apply -var-file=environments/dev.tfvars -auto-approve
@@ -177,11 +178,11 @@ spec:
 		gcpsm:
 			projectID: ${PROJECT_ID}
 ```
-3. Create secret in GCP:
+3. Create secret in GCP (if using GSM):
 ```
 echo -n 'ChangeMe123!' | gcloud secrets create vikunja-db-password --data-file=-
 ```
-4. Enable in Helm values:
+4. Enable in Helm values (and omit TF_VAR_db_password if Cloud SQL password is only needed inside DB provisioning flow—alternatively let Cloud SQL create a random user and manage separately):
 ```
 externalSecrets:
 	enabled: true
@@ -191,6 +192,15 @@ externalSecrets:
 5. Deploy/upgrade chart. The plain Secret manifest is skipped when external secrets are enabled.
 
 CI validates rendered manifests with `helm template` + `kubeconform`.
+
+### Handling Database Password Securely
+
+The variable `db_password` has no default and is intentionally omitted from tfvars files. Supply it by one of these methods:
+1. Environment variable before terraform commands:
+	`export TF_VAR_db_password=$(gcloud secrets versions access latest --secret=vikunja-db-password)`
+2. GitHub Actions secret: add `TF_VAR_db_password` in repo secrets (only for dev/testing; prefer GSM + External Secrets in prod).
+3. Rotate by updating the secret and re-running `terraform apply` (will force user password update in Cloud SQL).
+4. For self-hosted Postgres, you can override Helm values using External Secrets so the password never appears in state (Cloud SQL user password still lands in state unless using a generated random + ignore_changes pattern—future enhancement).
 
 Makefile targets ease local workflows (`make init plan apply helm-template`).
 
