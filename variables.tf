@@ -120,7 +120,7 @@ variable "authorized_networks" {
     value = string
   }))
   default     = []
-  description = "Authorized public CIDR networks for Cloud SQL (passed through to module). Keep empty or narrow; avoid 0.0.0.0/0 in prod." 
+  description = "Authorized public CIDR networks for Cloud SQL (passed through to module). Keep empty or narrow; avoid 0.0.0.0/0 in prod."
 }
 
 # Keycloak dedicated database configuration
