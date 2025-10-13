@@ -19,9 +19,9 @@ module "gke" {
   services_secondary_range_name = "services"
   # Reduced footprint for quota: change via tfvars for prod
   release_channel = "REGULAR"
-  min_nodes = 1
-  max_nodes = 2
-  machine_type = "e2-standard-2" # was e2-standard-4
+  min_nodes = var.gke_min_nodes
+  max_nodes = var.gke_max_nodes
+  machine_type = var.gke_machine_type
   enable_workload_identity = true
   enable_vertical_pod_autoscaling = false # disable to save overhead in dev
   labels = { env = "dev" }
@@ -34,13 +34,10 @@ module "cloudsql" {
   region = var.region
   instance_name = "vikunja-db"
   # Smaller tier for development to fit quota (1 vCPU, 1.7GB approx)
-  db_tier = "db-f1-micro"
+  db_tier = var.cloudsql_tier
   database_name = "vikunja"
   db_user = "vikunja"
   db_password = var.db_password
-  # ZONAL to avoid regional disk requirements; switch to REGIONAL in prod
-  availability_type = "ZONAL"
+  availability_type = var.cloudsql_availability_type
   deletion_protection = false
 }
-
-// outputs moved to outputs.tf

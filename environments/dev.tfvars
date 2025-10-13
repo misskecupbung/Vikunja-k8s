@@ -1,0 +1,12 @@
+project_id      = "sixth-bonbon-475003-q2"
+region          = "us-central1"
+enable_cloudsql = true
+
+# GKE sizing (dev)
+gke_min_nodes    = 1
+gke_max_nodes    = 1
+gke_machine_type = "e2-small" # smaller shared-core for dev
+
+# Cloud SQL sizing (dev)
+cloudsql_tier              = "db-f1-micro"
+cloudsql_availability_type = "ZONAL"
