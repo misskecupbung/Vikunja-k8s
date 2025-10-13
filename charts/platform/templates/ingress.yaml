@@ -5,11 +5,20 @@ metadata:
   annotations:
     kubernetes.io/ingress.class: "{{ .Values.ingressClass }}"
     kubernetes.io/ingress.global-static-ip-name: "{{ .Values.staticIpName }}"
+    networking.gke.io/managed-certificates: platform-cert
 spec:
   rules:
     - host: "{{ .Values.hosts.vikunja }}"
       http:
         paths:
+          # API paths first so they don't get swallowed by the root / rule
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: vikunja
+                port:
+                  number: 3456
           - path: /
             pathType: Prefix
             backend:

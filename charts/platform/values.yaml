@@ -3,3 +3,7 @@ hosts:
   vikunja: vikunja.local
   keycloak: keycloak.local
 ingressClass: gce
+  # Adding managed certificate support
+managedCertificate:
+  enabled: true
+  name: platform-cert
