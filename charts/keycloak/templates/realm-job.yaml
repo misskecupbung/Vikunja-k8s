@@ -1,5 +1,4 @@
 {{- if and .Values.realm.enabled .Values.postInstall.enabled }}
----
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -38,7 +37,7 @@ spec:
               BASE_URL="http://keycloak:8080"
               echo "Waiting for Keycloak readiness..."
               until curl -sf "${BASE_URL}/health/ready" >/dev/null; do sleep 5; done
-              echo "Keycloak is ready. Configuring realm {{ .Values.realm.name }}"
+              echo "Keycloak is ready. Bootstrapping realm '{{ .Values.realm.name }}'"
               /opt/keycloak/bin/kcadm.sh config credentials --server "${BASE_URL}" --realm master --user "$KEYCLOAK_ADMIN" --password "$KEYCLOAK_ADMIN_PASSWORD"
               if ! /opt/keycloak/bin/kcadm.sh get realms/{{ .Values.realm.name }} >/dev/null 2>&1; then
                 echo "Creating realm {{ .Values.realm.name }}"
@@ -46,24 +45,33 @@ spec:
               else
                 echo "Realm {{ .Values.realm.name }} already exists"
               fi
-              {{- range .Values.realm.clients }}
+{{- range .Values.realm.clients }}
               if ! /opt/keycloak/bin/kcadm.sh get clients -r {{ $.Values.realm.name }} --fields clientId | grep -q '"clientId" : "{{ .clientId }}"'; then
                 echo "Creating client {{ .clientId }}"
-                cat <<'EOF' > /tmp/client.json
-{
-  "clientId": "{{ .clientId }}",
-  "publicClient": {{ if .publicClient }}true{{ else }}false{{ end }},
-  "redirectUris": [
-{{- range $i, $uri := .redirectUris }}{{ if $i }}, {{ end }}    "{{ $uri }}"{{ end }}
-  ],
-  "protocol": "openid-connect",
-  "standardFlowEnabled": true,
-  "directAccessGrantsEnabled": true
-}
-EOF
-                /opt/keycloak/bin/kcadm.sh create clients -r {{ $.Values.realm.name }} -f /tmp/client.json
+                /opt/keycloak/bin/kcadm.sh create clients -r {{ $.Values.realm.name }} \
+                  -s clientId={{ .clientId }} \
+                  -s publicClient={{ if .publicClient }}true{{ else }}false{{ end }} \
+                  -s redirectUris='{{ toJson .redirectUris }}' \
+                  -s protocol=openid-connect \
+                  -s standardFlowEnabled=true \
+                  -s directAccessGrantsEnabled=true
               else
                 echo "Client {{ .clientId }} already exists"
               fi
-              {{- end }}
 {{- end }}
+{{- end }}
+                  TMP=$(mktemp)
+                  printf '{\n  "clientId": "%s",\n  "publicClient": %s,\n  "redirectUris": [\n' "$CLIENT_ID" "$CLIENT_PUBLIC" > "$TMP"
+                  IFS=',' read -r -a URIS <<< "${CLIENT_REDIRECT_URIS}" || true
+                  for i in "${!URIS[@]}"; do
+                    SEP=','
+                    [ $i -eq $(( ${#URIS[@]} - 1 )) ] && SEP=''
+                    printf '    "%s"%s\n' "${URIS[$i]}" "$SEP" >> "$TMP"
+                  done
+                  printf '  ],\n  "protocol": "openid-connect",\n  "standardFlowEnabled": true,\n  "directAccessGrantsEnabled": true\n}' >> "$TMP"
+                  /opt/keycloak/bin/kcadm.sh create clients -r ${REALM_NAME} -f "$TMP"
+                else
+                  echo "Client ${CLIENT_ID} already exists"
+                fi
+              fi
+{{ end }}
