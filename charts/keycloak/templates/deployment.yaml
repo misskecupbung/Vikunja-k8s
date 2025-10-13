@@ -50,8 +50,9 @@ spec:
                   key: password
             - name: KC_DB_URL_PROPERTIES
               value: '{{ default "" .Values.database.parameters }}'
-            - name: KC_PROXY
-              value: edge
+            # Use proxy headers instead of deprecated KC_PROXY flag (edge equivalent)
+            - name: KC_PROXY_HEADERS
+              value: xforwarded
             - name: KC_HTTP_RELATIVE_PATH
               value: /
             - name: KC_HOSTNAME

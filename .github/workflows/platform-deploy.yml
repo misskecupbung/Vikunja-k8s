@@ -20,6 +20,13 @@ env:
   GOOGLE_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
   TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
   TF_VAR_region: ${{ secrets.GCP_REGION }}
+  # Database passwords sourced directly from GitHub secrets (single source of truth)
+  TF_VAR_vikunja_db_password: ${{ secrets.VIKUNJA_DB_PASSWORD }}
+  TF_VAR_keycloak_db_password: ${{ secrets.KEYCLOAK_DB_PASSWORD }}
+  # Backward compatibility (deprecated Terraform variable)
+  TF_VAR_db_password: ${{ secrets.VIKUNJA_DB_PASSWORD }}
+  VIKUNJA_DB_PASSWORD: ${{ secrets.VIKUNJA_DB_PASSWORD }}
+  KEYCLOAK_DB_PASSWORD: ${{ secrets.KEYCLOAK_DB_PASSWORD }}
   CLUSTER_NAME: "vikunja-gke"
   CLUSTER_LOCATION: "us-central1-a"
   CLOUDSQL_INSTANCE: "vikunja-db"
@@ -50,16 +57,13 @@ jobs:
           sudo mv kubeconform /usr/local/bin/
       - name: Kubeconform Validate
         run: kubeconform -ignore-missing-schemas -schema-location default -summary rendered.yaml
-      - name: Export Secrets
+      - name: Check Required Secrets
         run: |
-          if [ -z "${{ secrets.VIKUNJA_DB_PASSWORD }}" ]; then
-            echo "Missing VIKUNJA_DB_PASSWORD secret" >&2; exit 1
-          fi
-          if [ -z "${{ secrets.KEYCLOAK_DB_PASSWORD }}" ]; then
-            echo "Missing KEYCLOAK_DB_PASSWORD secret" >&2; exit 1
-          fi
-          echo "TF_VAR_db_password=${{ secrets.VIKUNJA_DB_PASSWORD }}" >> $GITHUB_ENV
-          echo "KEYCLOAK_DB_PASSWORD=${{ secrets.KEYCLOAK_DB_PASSWORD }}" >> $GITHUB_ENV
+          for s in VIKUNJA_DB_PASSWORD KEYCLOAK_DB_PASSWORD GCP_PROJECT_ID GCP_REGION GCP_WIF_PROVIDER GCP_TERRAFORM_SA TF_STATE_BUCKET; do
+            if [ -z "$(printenv $s)" ]; then
+              echo "Missing required secret/env: $s" >&2; exit 1
+            fi
+          done
       - name: Terraform Init
         run: |
           terraform init \
@@ -106,16 +110,13 @@ jobs:
           workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
           service_account: ${{ secrets.GCP_TERRAFORM_SA }}
       - uses: google-github-actions/setup-gcloud@v3
-      - name: Export Secrets
+      - name: Check Required Secrets
         run: |
-          if [ -z "${{ secrets.VIKUNJA_DB_PASSWORD }}" ]; then
-            echo "Missing VIKUNJA_DB_PASSWORD secret" >&2; exit 1
-          fi
-          if [ -z "${{ secrets.KEYCLOAK_DB_PASSWORD }}" ]; then
-            echo "Missing KEYCLOAK_DB_PASSWORD secret" >&2; exit 1
-          fi
-          echo "TF_VAR_db_password=${{ secrets.VIKUNJA_DB_PASSWORD }}" >> $GITHUB_ENV
-          echo "KEYCLOAK_DB_PASSWORD=${{ secrets.KEYCLOAK_DB_PASSWORD }}" >> $GITHUB_ENV
+          for s in VIKUNJA_DB_PASSWORD KEYCLOAK_DB_PASSWORD GCP_PROJECT_ID GCP_REGION GCP_WIF_PROVIDER GCP_TERRAFORM_SA TF_STATE_BUCKET; do
+            if [ -z "$(printenv $s)" ]; then
+              echo "Missing required secret/env: $s" >&2; exit 1
+            fi
+          done
 
       - name: Terraform Init
         run: |

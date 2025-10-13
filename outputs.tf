@@ -22,3 +22,13 @@ output "cloudsql_public_ip" {
   value       = try(module.cloudsql[0].public_ip_address, null)
   description = "Cloud SQL public IPv4 address (null if private or disabled)"
 }
+
+output "keycloak_db_name" {
+  value       = try(module.cloudsql[0].keycloak_db_name, null)
+  description = "Dedicated Keycloak database name (null if not managed)"
+}
+
+output "keycloak_db_user" {
+  value       = try(module.cloudsql[0].keycloak_db_user, null)
+  description = "Dedicated Keycloak database user (null if not managed)"
+}
