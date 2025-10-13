@@ -1,0 +1,18 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "vikunja.fullname" . }}-ingress
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ include "vikunja.name" . }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector: {}
+      ports:
+        - port: 80
+          protocol: TCP
+        - port: 3456
+          protocol: TCP

@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "vikunja.fullname" . }}
+  annotations:
+{{- range $k, $v in .Values.ingress.annotations }}
+    {{ $k }}: {{ $v | quote }}
+{{- end }}
+spec:
+  rules:
+    - host: {{ .Values.ingress.host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "vikunja.fullname" . }}
+                port:
+                  number: 80
+  tls:
+{{ toYaml .Values.ingress.tls | indent 4 }}
