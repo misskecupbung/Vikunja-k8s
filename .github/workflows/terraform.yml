@@ -1,6 +1,6 @@
 name: Terraform Apply Workflow
 
-'on':
+on:
   push:
     branches:
       - main
@@ -40,42 +40,67 @@ jobs:
           workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
           service_account: ${{ secrets.GCP_TERRAFORM_SA }}
 
-      - name: check the json
-        run: cat /home/runner/work/Vikunja-k8s/Vikunja-k8s/*.json
-
       - name: Setup gcloud
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Fetch DB password from Secret Manager with retry
+      - name: Debug GCP Identity
+        run: |
+          echo "Auth context (expected SA: ${{ secrets.GCP_TERRAFORM_SA }})";
+          gcloud auth list;
+          gcloud config list --format 'value(core.project,core.account)';
+          echo 'Enabled services (sample):';
+          gcloud services list --enabled --limit=10 || true
+
+      - name: Guard Active Service Account
+        run: |
+          ACT=$(gcloud config get-value account 2>/dev/null || true)
+          EXP='${{ secrets.GCP_TERRAFORM_SA }}'
+          echo "Active account: $ACT"; echo "Expected: $EXP"
+          if [ "$ACT" != "$EXP" ]; then
+            echo "Mismatch: impersonation not effective. Failing early." >&2
+            exit 1
+          fi
+
+      - name: Raw Secret REST Test (pre-fetch)
+        run: |
+          set -euo pipefail
+          ACCESS_TOKEN=$(gcloud auth print-access-token)
+          PROJECT='${{ secrets.GCP_PROJECT_ID }}'
+          SECRET_ID='vikunja-db-password'
+          echo "Calling Secret Manager REST for $SECRET_ID in $PROJECT";
+          HTTP_CODE=$(curl -s -o /tmp/resp -w '%{http_code}' -H "Authorization: Bearer $ACCESS_TOKEN" \
+            "https://secretmanager.googleapis.com/v1/projects/$PROJECT/secrets/$SECRET_ID/versions/latest:access" )
+          echo "HTTP_CODE=$HTTP_CODE"
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Response body:"; cat /tmp/resp; exit 1; fi
+          head -c 10 /tmp/resp || true; echo; echo "REST secret test succeeded"
+
+      - name: Fetch DB password (with fallback)
+        id: fetch-secret
         run: |
           set -euo pipefail
           SECRET_NAME="vikunja-db-password"
           PROJECT="${{ secrets.GCP_PROJECT_ID }}"
-          MAX_ATTEMPTS=5
-          SLEEP_SECONDS=30
-
-          for i in $(seq 1 $MAX_ATTEMPTS); do
-            echo "Attempt $i to access secret..."
-            if PASSWORD=$(gcloud secrets versions access latest --secret="$SECRET_NAME" --project "$PROJECT" 2>/tmp/secret_err); then
-              echo "::add-mask::$PASSWORD"
-              echo "TF_VAR_db_password=$PASSWORD" >> "$GITHUB_ENV"
-              echo "Secret fetched successfully!"
-              break
-            else
-              echo "Failed to fetch secret: $(cat /tmp/secret_err)"
-              if [ $i -lt $MAX_ATTEMPTS ]; then
-                echo "Retrying in $SLEEP_SECONDS seconds..."
-                sleep $SLEEP_SECONDS
-              else
-                echo "FATAL: Unable to fetch secret after $MAX_ATTEMPTS attempts."
-                exit 1
-              fi
-            fi
-          done
-
-      - name: Fetch DB password from Secret Manager
-        run: |
-          echo "TF_VAR_db_password=$(gcloud secrets versions access latest --secret=vikunja-db-password --project ${{ secrets.GCP_PROJECT_ID }})" >> $GITHUB_ENV
+          echo "Attempting Secret Manager access for $SECRET_NAME in $PROJECT"
+          FALLBACK_FLAG=0
+          if PASSWORD=$(gcloud secrets versions access latest --secret="$SECRET_NAME" --project "$PROJECT" 2> /tmp/secret_err); then
+            echo "Secret Manager fetch successful."
+          elif [ -n "${{ secrets.VIKUNJA_DB_PASSWORD }}" ]; then
+            echo "Secret Manager fetch failed; using GitHub secret fallback."; FALLBACK_FLAG=1
+            PASSWORD='${{ secrets.VIKUNJA_DB_PASSWORD }}'
+          else
+            echo "Secret Manager fetch failed (details):"; cat /tmp/secret_err || true
+            echo "No GitHub fallback provided; generating ephemeral password (NOT FOR PROD)."; FALLBACK_FLAG=2
+            # Avoid piping to head (causes broken pipe under set -euo pipefail)
+            # Generate 48 bytes base64 then strip non-alphanumerics and cut to 24 chars
+            PASSWORD=$(openssl rand -base64 48 | tr -dc 'A-Za-z0-9' | cut -c1-24)
+          fi
+          if [ "$FALLBACK_FLAG" = "2" ]; then
+            echo "WARNING: Ephemeral password generated. Create Secret Manager secret '$SECRET_NAME' to eliminate this path." >&2
+          fi
+          echo "::add-mask::$PASSWORD"
+          echo "TF_VAR_db_password=$PASSWORD" >> "$GITHUB_ENV"
+          echo "fallback_used=$FALLBACK_FLAG" >> "$GITHUB_OUTPUT"
 
       - name: Terraform Init
         run: |
@@ -109,16 +134,13 @@ jobs:
           sudo mv kubeconform /usr/local/bin/
 
       - name: Helm Template (render)
-        run: helm template test charts/vikunja --values charts/vikunja/values.yaml >
-          rendered.yaml
+        run: helm template test charts/vikunja --values charts/vikunja/values.yaml > rendered.yaml
 
       - name: Kubeconform Validate
-        run: kubeconform -ignore-missing-schemas -schema-location default -summary
-          rendered.yaml
+        run: kubeconform -ignore-missing-schemas -schema-location default -summary rendered.yaml
 
       - name: Terraform Plan
-        run: terraform plan -input=false -var-file=environments/$TF_WORKSPACE.tfvars
-          -no-color | tee plan.out
+        run: terraform plan -input=false -var-file=environments/$TF_WORKSPACE.tfvars -no-color | tee plan.out
 
       - name: Upload Plan Artifact
         uses: actions/upload-artifact@v4
@@ -141,8 +163,7 @@ jobs:
           secret: ${{ github.TOKEN }}
           approvers: misskecupbung
           minimum-approvals: 1
-          issue-title: 'Manual Approval Required for Terraform Apply (workspace: ${{
-            needs.terraform-plan.outputs.workspace }})'
+          issue-title: "Manual Approval Required for Terraform Apply (workspace: ${{ needs.terraform-plan.outputs.workspace }})"
           issue-body: |
             Please approve or deny the deployment.
             Workspace: ${{ needs.terraform-plan.outputs.workspace }}
@@ -152,9 +173,7 @@ jobs:
   terraform-apply:
     name: Terraform Apply
     runs-on: ubuntu-latest
-    needs:
-      - manual-approval
-      - terraform-plan
+    needs: [manual-approval, terraform-plan]
     permissions:
       contents: read
       id-token: write
@@ -197,5 +216,4 @@ jobs:
           terraform workspace select $WS
           echo "TF_WORKSPACE=$WS" >> $GITHUB_ENV
       - name: Terraform Apply
-        run: terraform apply -input=false -auto-approve
-          -var-file=environments/$TF_WORKSPACE.tfvars
+        run: terraform apply -input=false -auto-approve -var-file=environments/$TF_WORKSPACE.tfvars
