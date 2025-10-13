@@ -50,7 +50,11 @@ jobs:
           if [ -z "${{ secrets.VIKUNJA_DB_PASSWORD }}" ]; then
             echo "Missing VIKUNJA_DB_PASSWORD secret" >&2; exit 1
           fi
+          if [ -z "${{ secrets.KEYCLOAK_DB_PASSWORD }}" ]; then
+            echo "Missing KEYCLOAK_DB_PASSWORD secret" >&2; exit 1
+          fi
           echo "TF_VAR_db_password=${{ secrets.VIKUNJA_DB_PASSWORD }}" >> $GITHUB_ENV
+          echo "KEYCLOAK_DB_PASSWORD=${{ secrets.KEYCLOAK_DB_PASSWORD }}" >> $GITHUB_ENV
       - name: Terraform Init
         run: |
           terraform init \
@@ -95,6 +99,16 @@ jobs:
           workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
           service_account: ${{ secrets.GCP_TERRAFORM_SA }}
       - uses: google-github-actions/setup-gcloud@v3
+      - name: Export Secrets
+        run: |
+          if [ -z "${{ secrets.VIKUNJA_DB_PASSWORD }}" ]; then
+            echo "Missing VIKUNJA_DB_PASSWORD secret" >&2; exit 1
+          fi
+          if [ -z "${{ secrets.KEYCLOAK_DB_PASSWORD }}" ]; then
+            echo "Missing KEYCLOAK_DB_PASSWORD secret" >&2; exit 1
+          fi
+          echo "TF_VAR_db_password=${{ secrets.VIKUNJA_DB_PASSWORD }}" >> $GITHUB_ENV
+          echo "KEYCLOAK_DB_PASSWORD=${{ secrets.KEYCLOAK_DB_PASSWORD }}" >> $GITHUB_ENV
 
       - name: Terraform Init
         run: |
