@@ -33,7 +33,7 @@ env:
   KEYCLOAK_ADMIN_USER: "admin"
   KEYCLOAK_ADMIN_PASSWORD: "admin"  # override with secret if desired
   # Shared ingress configuration
-  PLATFORM_LB_IP_NAME: "todo-platform-lb-ip"   # Must exist or will be created outside (global static IP)
+  PLATFORM_LB_IP_NAME: "vikunja-platform-lb-ip"   # Terraform-managed global static IP
   KEYCLOAK_HOST: "keycloak.misskecupbung.xyz"
   VIKUNJA_HOST: "vikunja.misskecupbung.xyz"
   
