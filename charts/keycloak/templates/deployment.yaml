@@ -98,9 +98,9 @@ spec:
             limits:
               cpu: "1"
               memory: 1.5Gi
-        {{- if .Values.cloudsql.enabled }}
         - name: cloud-sql-proxy
-          image: {{ .Values.cloudsql.image }}
+          image: "{{ .Values.cloudsql.image }}"
+          # Instance connection name must be set via values override file or --set
           command:
             - /cloud_sql_proxy
             - -log_debug_stdout
@@ -115,4 +115,3 @@ spec:
             limits:
               cpu: 200m
               memory: 256Mi
-        {{- end }}
