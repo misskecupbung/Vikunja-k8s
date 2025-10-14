@@ -32,3 +32,13 @@ output "keycloak_db_user" {
   value       = try(module.cloudsql[0].keycloak_db_user, null)
   description = "Dedicated Keycloak database user (null if not managed)"
 }
+
+output "platform_lb_ip_name" {
+  value       = var.global_lb_ip_name
+  description = "Name of the global static IP reserved for the platform ingress"
+}
+
+output "platform_lb_ip_address" {
+  value       = google_compute_global_address.platform_lb.address
+  description = "Allocated global static IPv4 address for the platform ingress"
+}

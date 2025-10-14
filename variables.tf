@@ -142,3 +142,9 @@ variable "keycloak_db_password" {
   default     = null
   description = "Password for the Keycloak DB user (supply via TF_VAR_keycloak_db_password). If null, Terraform will not attempt to manage the user password (manual)."
 }
+
+variable "global_lb_ip_name" {
+  type        = string
+  default     = "vikunja-platform-lb-ip"
+  description = "Name of the global static IPv4 address reserved for the GCE Ingress load balancer."
+}
