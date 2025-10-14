@@ -21,8 +21,8 @@ cloudsql:
       memory: 256Mi
 
 ingress:
-  enabled: true
-  host: keycloak.local
+  enabled: false
+  host: keycloak.misskecupbung.xyz
   className: "gce"
   annotations:
     kubernetes.io/ingress.class: "gce"

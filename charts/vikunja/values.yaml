@@ -18,7 +18,7 @@ service:
   port: 80
 
 ingress:
-  enabled: true
+  enabled: false
   className: "gce"
   host: vikunja.misskecupbung.xyz
   annotations:
