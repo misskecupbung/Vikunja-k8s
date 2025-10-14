@@ -1,7 +1,7 @@
 apiVersion: networking.gke.io/v1
 kind: ManagedCertificate
 metadata:
-  name: vikunja-ingress-cert
+  name: {{ .Values.managedCertificate.name | quote }}
 spec:
   domains:
     - vikunja.misskecupbung.xyz
