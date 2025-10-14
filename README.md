@@ -306,9 +306,13 @@ This is a reference implementation for interview purposes; hard-coded sample val
 >>>>>>> c10c5cb (refine egress)
 =======
 ## 13. Disclaimer
+<<<<<<< HEAD
 Sample values are not production-ready. Replace demo passwords, enable managed secrets, and review security posture before real-world use.
 <<<<<<< HEAD
 >>>>>>> cb86d2f (add files)
 =======
 
 >>>>>>> e5a7dd4 (change cloud aql proxy)
+=======
+Sample values are not production-ready. Replace demo passwords, enable managed secrets, and review security posture before real-world use.
+>>>>>>> b0ef09f (change cloud aql proxy)
