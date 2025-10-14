@@ -28,6 +28,12 @@ module "gke" {
   labels                          = { env = "dev" }
 }
 
+# Delay to allow service networking peering to propagate before creating Cloud SQL private IP instance
+resource "time_sleep" "wait_for_peering" {
+  depends_on = [module.network]
+  create_duration = "30s"
+}
+
 module "cloudsql" {
   source               = "./modules/cloudsql"
   count                = var.enable_cloudsql ? 1 : 0
@@ -46,4 +52,5 @@ module "cloudsql" {
   keycloak_db_password = var.keycloak_db_password
   enable_public_ip     = false
   private_network      = module.network.network
+  depends_on           = [time_sleep.wait_for_peering]
 }
