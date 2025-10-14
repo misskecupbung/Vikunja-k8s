@@ -282,5 +282,72 @@ Sample values are not production-ready. Replace demo passwords, enable managed s
 - Automated Keycloak realm bootstrap
 
 ## Disclaimer
+<<<<<<< HEAD
 Defaults are for development. Review security (passwords, network access, TLS) before production use.
 >>>>>>> b32fde8 (change cloud aql proxy)
+=======
+## OpenID Connect (OIDC) Setup & Troubleshooting
+
+### Required Vikunja Values (Keycloak example)
+```
+openid:
+  enabled: true
+  issuer: https://keycloak.misskecupbung.xyz/realms/vikunja
+  clientId: vikunja-web
+  redirectURL: https://vikunja.misskecupbung.xyz/auth/openid/keycloak
+  scopes: openid profile email
+  providerName: keycloak
+```
+
+Redirect URL format: `https://<vikunja-host>/auth/openid/<provider-name-lowercase>` — matches the provider name value.
+
+### Keycloak Client Settings
+Realm `vikunja`:
+- Client ID: `vikunja-web`
+- Public Client: On (or confidential with secret + set `confidentialClient: true` in values and create secret)
+- Root URL: `https://vikunja.misskecupbung.xyz`
+- Valid Redirect URIs: `/auth/openid/keycloak`
+- Web Origins: `https://vikunja.misskecupbung.xyz`
+
+### Common Symptoms
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| `providers` is `null` | Single provider (normal) or init race | Try login; restart deployment; set `providerName` |
+| Redirect 403 from Keycloak | Redirect URI mismatch | Align Keycloak client redirect with Vikunja value |
+| Iframe timeout | Host/proxy headers mismatch | Ensure DNS correct; hostname strict disabled |
+| 500 after auth | Client type mismatch | Check public vs confidential settings |
+| Discovery fails | DNS / egress block | Curl well-known from debug pod |
+
+### Debug Commands
+```bash
+curl -s https://keycloak.misskecupbung.xyz/realms/vikunja/.well-known/openid-configuration | jq .issuer
+kubectl rollout restart deploy/vikunja
+kubectl logs deploy/vikunja -c api | grep -i openid || true
+kubectl run oidc-debug --rm -it --image=alpine:3 -- sh -c 'apk add --no-cache curl; curl -s https://keycloak.misskecupbung.xyz/realms/vikunja/.well-known/openid-configuration | grep authorization_endpoint'
+```
+
+### Multi-Provider Example
+```
+auth:
+  openid:
+    enabled: true
+    providers:
+      - name: keycloak
+        authurl: https://keycloak.misskecupbung.xyz/realms/vikunja
+        clientid: vikunja-web
+      - name: google
+        authurl: https://accounts.google.com
+        clientid: <google-client-id>
+```
+Each provider requires its own redirect URL: `/auth/openid/keycloak`, `/auth/openid/google`.
+
+### Checklist
+- [ ] Realm + client exists
+- [ ] Redirect URI matches provider name
+- [ ] Pod restarted after config change
+- [ ] Issuer reachable (inside & outside cluster)
+- [ ] Scopes include `openid`
+- [ ] Time sync (no large clock skew)
+
+Defaults are for development. Review security (passwords, network access, TLS) before production use.
+>>>>>>> 3a55eab (change cloud aql proxy)

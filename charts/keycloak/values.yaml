@@ -38,7 +38,7 @@ realm:
     - clientId: vikunja-web
       publicClient: true
       redirectUris:
-        - "https://vikunja.misskecupbung.xyz/auth/openid/callback"
+        - "https://vikunja.misskecupbung.xyz/auth/openid/keycloak"
 
 postInstall:
   enabled: true
