@@ -24,6 +24,9 @@ serviceAccount:
   create: true
   name: ""  # If empty, will default to chart fullname
   annotations: {}
+  workloadIdentity:
+    enabled: false
+    gsaEmail: "" # e.g. vikunja-workloads@sixth-bonbon-475003-q2.iam.gserviceaccount.com
 
 ingress:
   enabled: false
