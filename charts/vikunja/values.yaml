@@ -77,8 +77,11 @@ openid:
   clientId: "vikunja-web"
   confidentialClient: false
   secretName: "vikunja-oidc-client"
-  redirectURL: "https://vikunja.misskecupbung.xyz/"  # Vikunja appends callback paths
+  redirectURL: "https://vikunja.misskecupbung.xyz/auth/openid/callback"  # Explicit callback path
   scopes: "openid profile email"
+
+# Optional: set to debug for deeper startup diagnostics (info|debug|trace)
+logLevel: "info"
 
 networkPolicy:
   enabled: true
