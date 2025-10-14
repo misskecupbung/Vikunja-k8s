@@ -307,4 +307,8 @@ This is a reference implementation for interview purposes; hard-coded sample val
 =======
 ## 13. Disclaimer
 Sample values are not production-ready. Replace demo passwords, enable managed secrets, and review security posture before real-world use.
+<<<<<<< HEAD
 >>>>>>> cb86d2f (add files)
+=======
+
+>>>>>>> e5a7dd4 (change cloud aql proxy)
