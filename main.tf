@@ -44,4 +44,6 @@ module "cloudsql" {
   keycloak_db_name     = var.keycloak_db_name
   keycloak_db_user     = var.keycloak_db_user
   keycloak_db_password = var.keycloak_db_password
+  enable_public_ip     = false
+  private_network      = module.network.network
 }
