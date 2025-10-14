@@ -30,7 +30,7 @@ module "gke" {
 
 # Delay to allow service networking peering to propagate before creating Cloud SQL private IP instance
 resource "time_sleep" "wait_for_peering" {
-  depends_on = [module.network]
+  depends_on      = [module.network]
   create_duration = "30s"
 }
 
