@@ -20,6 +20,11 @@ cloudsql:
       cpu: 200m
       memory: 256Mi
 
+serviceAccount:
+  create: true
+  name: ""  # If empty, will default to chart fullname
+  annotations: {}
+
 ingress:
   enabled: false
   host: keycloak.example.com

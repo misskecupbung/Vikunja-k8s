@@ -14,6 +14,7 @@ spec:
       labels:
         app: keycloak
     spec:
+      serviceAccountName: default
       containers:
         - name: keycloak
           image: quay.io/keycloak/keycloak:24.0.1
@@ -90,16 +91,15 @@ spec:
         - name: cloud-sql-proxy
           image: "{{ .Values.cloudsql.image }}"
           command:
-            - /bin/sh
-            - -c
-            - |
-              if [ "{{ .Values.cloudsql.enabled }}" = "true" ] && [ -n "{{ .Values.cloudsql.instanceConnectionName }}" ]; then
-                echo "Starting Cloud SQL Proxy for instance {{ .Values.cloudsql.instanceConnectionName }}";
-                exec /cloud_sql_proxy -instances={{ .Values.cloudsql.instanceConnectionName }}=tcp:5432;
-              else
-                echo "Cloud SQL Proxy disabled (cloudsql.enabled!=true or instanceConnectionName empty); sleeping";
-                sleep 3600;
-              fi
+            - /cloud_sql_proxy
+            - -instances={{ .Values.cloudsql.instanceConnectionName }}=tcp:5432
           securityContext:
             runAsNonRoot: true
             runAsUser: 65534
+          resources:
+            requests:
+              cpu: 20m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
