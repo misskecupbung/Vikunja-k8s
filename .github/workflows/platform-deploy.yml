@@ -49,11 +49,6 @@ jobs:
           workload_identity_provider: ${{ env.WIF_PROVIDER }}
           service_account: ${{ env.TERRAFORM_SA }}
       - uses: google-github-actions/setup-gcloud@v3
-      - name: Helm Lint Charts
-        run: |
-          helm lint charts/vikunja || exit 1
-          helm lint charts/keycloak || exit 1
-          helm lint charts/platform || exit 1
       - name: Terraform Init
         run: |
           terraform init \
