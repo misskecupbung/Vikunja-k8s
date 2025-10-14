@@ -76,6 +76,7 @@ openid:
   secretName: "vikunja-oidc-client"
   redirectURL: "https://vikunja.misskecupbung.xyz/auth/openid/callback"
   scopes: "openid profile email"
+  providerName: "Keycloak"
 
 logLevel: "debug"
 
