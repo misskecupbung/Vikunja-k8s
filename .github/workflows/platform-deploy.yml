@@ -81,12 +81,14 @@ jobs:
           terraform fmt -check -recursive
           terraform validate
       - name: Terraform Plan
-        run: terraform plan -input=false -var-file=environments/$TF_WORKSPACE.tfvars \
-          -var "project_id=${PROJECT_ID}" \
-          -var "region=${REGION}" \
-          -var "vikunja_db_password=${VIKUNJA_DB_PASSWORD}" \
-          -var "keycloak_db_password=${KEYCLOAK_DB_PASSWORD}" \
-          -no-color | tee plan.out
+        run: |
+          terraform plan -input=false \
+            -var-file=environments/$TF_WORKSPACE.tfvars \
+            -var "project_id=${PROJECT_ID}" \
+            -var "region=${REGION}" \
+            -var "vikunja_db_password=${VIKUNJA_DB_PASSWORD}" \
+            -var "keycloak_db_password=${KEYCLOAK_DB_PASSWORD}" \
+            -no-color | tee plan.out
       - uses: actions/upload-artifact@v4
         with:
           name: terraform-plan-${{ env.TF_WORKSPACE }}
@@ -124,11 +126,13 @@ jobs:
           issue-title: "Prod Apply Approval (workspace: ${{ needs.prepare.outputs.workspace }})"
           issue-body: "Approve to apply Terraform to production workspace."
       - name: Terraform Apply
-        run: terraform apply -input=false -auto-approve -var-file=environments/${WORKSPACE}.tfvars \
-          -var "project_id=${PROJECT_ID}" \
-          -var "region=${REGION}" \
-          -var "vikunja_db_password=${VIKUNJA_DB_PASSWORD}" \
-          -var "keycloak_db_password=${KEYCLOAK_DB_PASSWORD}"
+        run: |
+          terraform apply -input=false -auto-approve \
+            -var-file=environments/${WORKSPACE}.tfvars \
+            -var "project_id=${PROJECT_ID}" \
+            -var "region=${REGION}" \
+            -var "vikunja_db_password=${VIKUNJA_DB_PASSWORD}" \
+            -var "keycloak_db_password=${KEYCLOAK_DB_PASSWORD}"
 
   deploy-keycloak:
     name: Deploy Keycloak
