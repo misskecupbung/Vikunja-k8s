@@ -68,10 +68,6 @@ externalSecrets:
       version: latest
 
 
-keycloak:
-  enabled: true
-  issuer: "https://keycloak.example.com/realms/vikunja"
-
 openid:
   enabled: true
   issuer: "https://keycloak.misskecupbung.xyz/realms/vikunja"
@@ -81,7 +77,7 @@ openid:
   redirectURL: "https://vikunja.misskecupbung.xyz/auth/openid/callback"
   scopes: "openid profile email"
 
-logLevel: "info"
+logLevel: "debug"
 
 networkPolicy:
   enabled: true

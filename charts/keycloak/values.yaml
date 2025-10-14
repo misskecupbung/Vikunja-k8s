@@ -32,13 +32,13 @@ ingress:
 hostnameOverride: "keycloak.misskecupbung.xyz"
 
 realm:
-  enabled: false
+  enabled: true
   name: vikunja
   clients:
     - clientId: vikunja-web
       publicClient: true
       redirectUris:
-        - "https://vikunja.misskecupbung.xyz/*"
+        - "https://vikunja.misskecupbung.xyz/auth/openid/callback"
 
 postInstall:
   enabled: true
