@@ -12,12 +12,3 @@ gke_disk_size_gb = 20
 # Cloud SQL sizing (dev)
 cloudsql_tier              = "db-f1-micro"
 cloudsql_availability_type = "ZONAL"
-
-# WARNING: 0.0.0.0/0 exposes the instance publicly. Use only for temporary dev troubleshooting.
-# Replace with a narrow /32 (your NAT or workstation public IP) ASAP.
-authorized_networks = [
-  {
-    name  = "any"
-    value = "0.0.0.0/0"
-  }
-]

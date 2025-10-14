@@ -17,26 +17,22 @@ permissions:
 
 env:
   TF_IN_AUTOMATION: true
-  GOOGLE_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
-  TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
-  TF_VAR_region: ${{ secrets.GCP_REGION }}
-  # Database passwords sourced directly from GitHub secrets (single source of truth)
-  TF_VAR_vikunja_db_password: ${{ secrets.VIKUNJA_DB_PASSWORD }}
-  TF_VAR_keycloak_db_password: ${{ secrets.KEYCLOAK_DB_PASSWORD }}
-  # Backward compatibility (deprecated Terraform variable)
-  TF_VAR_db_password: ${{ secrets.VIKUNJA_DB_PASSWORD }}
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: "us-central1"
+  WIF_PROVIDER: ${{ secrets.GCP_WIF_PROVIDER }}
+  TERRAFORM_SA: ${{ secrets.GCP_TERRAFORM_SA }}
+  TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
   VIKUNJA_DB_PASSWORD: ${{ secrets.VIKUNJA_DB_PASSWORD }}
   KEYCLOAK_DB_PASSWORD: ${{ secrets.KEYCLOAK_DB_PASSWORD }}
   CLUSTER_NAME: "vikunja-gke"
   CLUSTER_LOCATION: "us-central1-a"
   CLOUDSQL_INSTANCE: "vikunja-db"
   KEYCLOAK_ADMIN_USER: "admin"
-  KEYCLOAK_ADMIN_PASSWORD: "admin"  # override with secret if desired
-  # Shared ingress configuration
-  PLATFORM_LB_IP_NAME: "vikunja-platform-lb-ip"   # Terraform-managed global static IP
+  KEYCLOAK_ADMIN_PASSWORD: "admin"
+  PLATFORM_LB_IP_NAME: "vikunja-platform-lb-ip"
   KEYCLOAK_HOST: "keycloak.misskecupbung.xyz"
   VIKUNJA_HOST: "vikunja.misskecupbung.xyz"
-  
+
 jobs:
   plan:
     name: Terraform Plan
@@ -50,8 +46,8 @@ jobs:
           terraform_version: 1.8.5
       - uses: google-github-actions/auth@v3
         with:
-          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
-          service_account: ${{ secrets.GCP_TERRAFORM_SA }}
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.TERRAFORM_SA }}
       - uses: google-github-actions/setup-gcloud@v3
       - name: Helm Template (Vikunja)
         run: helm template vikunja charts/vikunja -f charts/vikunja/values.yaml > rendered.yaml
@@ -64,7 +60,7 @@ jobs:
       - name: Terraform Init
         run: |
           terraform init \
-            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+            -backend-config="bucket=$TF_STATE_BUCKET" \
             -backend-config="prefix=terraform"
       - id: set-ws
         name: Select Workspace
@@ -104,18 +100,15 @@ jobs:
           terraform_version: 1.8.5
       - uses: google-github-actions/auth@v3
         with:
-          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
-          service_account: ${{ secrets.GCP_TERRAFORM_SA }}
-
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.TERRAFORM_SA }}
       - name: Terraform Init
         run: |
           terraform init \
-            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+            -backend-config="bucket=$TF_STATE_BUCKET" \
             -backend-config="prefix=terraform"
-
       - name: Select Workspace
         run: terraform workspace select ${WORKSPACE}
-
       - name: Await Prod Approval (Production)
         if: github.ref == 'refs/heads/main'
         uses: trstringer/manual-approval@v1
@@ -125,7 +118,6 @@ jobs:
           minimum-approvals: 1
           issue-title: "Prod Apply Approval (workspace: ${{ needs.prepare.outputs.workspace }})"
           issue-body: "Approve to apply Terraform to production workspace."
-
       - name: Terraform Apply
         run: terraform apply -input=false -auto-approve -var-file=environments/${WORKSPACE}.tfvars
 
@@ -140,36 +132,25 @@ jobs:
       - uses: actions/checkout@v4
       - uses: google-github-actions/auth@v3
         with:
-          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
-          service_account: ${{ secrets.GCP_TERRAFORM_SA }}
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.TERRAFORM_SA }}
       - uses: google-github-actions/setup-gcloud@v3
-
       - id: 'get-credentials'
         uses: 'google-github-actions/get-gke-credentials@v3'
         with:
           cluster_name: ${{ env.CLUSTER_NAME }}
           location: ${{ env.CLUSTER_LOCATION }}
-
       - name: Create Keycloak Secrets
         run: |
-          if [ -z "${{ secrets.KEYCLOAK_DB_PASSWORD }}" ]; then echo "Missing KEYCLOAK_DB_PASSWORD secret" >&2; exit 1; fi
-          # Prefer GitHub secrets for admin creds if provided
-          ADMIN_USER=${{ secrets.KEYCLOAK_ADMIN_USER || env.KEYCLOAK_ADMIN_USER }}
-          ADMIN_PASS=${{ secrets.KEYCLOAK_ADMIN_PASSWORD || env.KEYCLOAK_ADMIN_PASSWORD }}
           kubectl create secret generic keycloak-admin \
-            --from-literal=username="${ADMIN_USER}" \
-            --from-literal=password="${ADMIN_PASS}" \
+            --from-literal=username="$KEYCLOAK_ADMIN_USER" \
+            --from-literal=password="$KEYCLOAK_ADMIN_PASSWORD" \
             --dry-run=client -o yaml | kubectl apply -f -
-          kubectl create secret generic keycloak-db --from-literal=password='${{ secrets.KEYCLOAK_DB_PASSWORD }}' --dry-run=client -o yaml | kubectl apply -f -
-
+          kubectl create secret generic keycloak-db --from-literal=password="$KEYCLOAK_DB_PASSWORD" --dry-run=client -o yaml | kubectl apply -f -
       - name: Helm Deploy Keycloak
         run: |
-          if [ -z "${CLOUDSQL_INSTANCE}" ]; then echo "CLOUDSQL_INSTANCE env var not set" >&2; exit 1; fi
-          if [ -z "${{ secrets.GCP_REGION }}" ]; then echo "GCP_REGION secret not set" >&2; exit 1; fi
-          INSTANCE_CONNECTION="${{ secrets.GCP_PROJECT_ID }}:${{ secrets.GCP_REGION }}:${CLOUDSQL_INSTANCE}"
-          echo "Using Cloud SQL instance connection: $INSTANCE_CONNECTION (proxy mode)"
-          set -e
-          if ! helm upgrade --install keycloak charts/keycloak -f charts/keycloak/values-ci.yaml \
+          INSTANCE_CONNECTION="$PROJECT_ID:$REGION:$CLOUDSQL_INSTANCE"
+          helm upgrade --install keycloak charts/keycloak -f charts/keycloak/values-ci.yaml \
             --set cloudsql.enabled=true \
             --set cloudsql.instanceConnectionName=$INSTANCE_CONNECTION \
             --set database.host=127.0.0.1 \
@@ -177,13 +158,7 @@ jobs:
             --set hostnameOverride=$KEYCLOAK_HOST \
             --set realm.clients[0].redirectUris[0]="https://$VIKUNJA_HOST/*" \
             --set realm.enabled=true \
-            --wait --timeout 10m; then
-            echo "Helm install/upgrade failed; dumping pod diagnostics:" >&2
-            kubectl get pods -l app=keycloak -o wide || true
-            kubectl describe pods -l app=keycloak || true
-            kubectl logs -l app=keycloak --all-containers --tail=200 || true
-            exit 1
-          fi
+            --wait --timeout 10m
 
   deploy-vikunja:
     name: Deploy Vikunja
@@ -196,29 +171,21 @@ jobs:
       - uses: actions/checkout@v4
       - uses: google-github-actions/auth@v3
         with:
-          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
-          service_account: ${{ secrets.GCP_TERRAFORM_SA }}
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.TERRAFORM_SA }}
       - uses: google-github-actions/setup-gcloud@v3
-
       - id: 'get-credentials'
         uses: 'google-github-actions/get-gke-credentials@v3'
         with:
           cluster_name: ${{ env.CLUSTER_NAME }}
           location: ${{ env.CLUSTER_LOCATION }}
-
       - name: Create Vikunja Secret
         run: |
-          if [ -z "${{ secrets.VIKUNJA_DB_PASSWORD }}" ]; then echo "Missing VIKUNJA_DB_PASSWORD secret" >&2; exit 1; fi
-          kubectl create secret generic vikunja-db --from-literal=password='${{ secrets.VIKUNJA_DB_PASSWORD }}' --dry-run=client -o yaml | kubectl apply -f -
-
+          kubectl create secret generic vikunja-db --from-literal=password="$VIKUNJA_DB_PASSWORD" --dry-run=client -o yaml | kubectl apply -f -
       - name: Helm Deploy Vikunja
         run: |
-          if [ -z "${CLOUDSQL_INSTANCE}" ]; then echo "CLOUDSQL_INSTANCE env var not set" >&2; exit 1; fi
-          if [ -z "${{ secrets.GCP_REGION }}" ]; then echo "GCP_REGION secret not set" >&2; exit 1; fi
-          INSTANCE_CONNECTION="${{ secrets.GCP_PROJECT_ID }}:${{ secrets.GCP_REGION }}:${CLOUDSQL_INSTANCE}"
-          echo "Using Cloud SQL instance connection (proxy): $INSTANCE_CONNECTION"
-          set -e
-          if ! helm upgrade --install vikunja charts/vikunja -f charts/vikunja/values-ci.yaml \
+          INSTANCE_CONNECTION="$PROJECT_ID:$REGION:$CLOUDSQL_INSTANCE"
+          helm upgrade --install vikunja charts/vikunja -f charts/vikunja/values-ci.yaml \
             --set cloudsql.enabled=true \
             --set cloudsql.instanceConnectionName=$INSTANCE_CONNECTION \
             --set ingress.enabled=false \
@@ -227,14 +194,7 @@ jobs:
             --set openid.issuer="https://$KEYCLOAK_HOST/realms/vikunja" \
             --set openid.redirectURL="https://$VIKUNJA_HOST/auth/openid/callback" \
             --set openid.clientId=vikunja-web \
-            --wait --timeout 10m; then
-            echo "Helm install/upgrade failed; dumping pod diagnostics:" >&2
-            kubectl get pods -l app=vikunja -o wide || true
-            kubectl describe pods -l app=vikunja || true
-            kubectl logs -l app=vikunja --all-containers --tail=200 || true
-            exit 1
-          fi
-
+            --wait --timeout 10m
       - name: Helm Deploy Platform Ingress
         run: |
           set -e
@@ -244,14 +204,4 @@ jobs:
             --set hosts.vikunja=$VIKUNJA_HOST \
             --set hosts.keycloak=$KEYCLOAK_HOST \
             --wait --timeout 5m
-          echo "Waiting for Ingress IP..."
-          for i in {1..30}; do
-            IP=$(kubectl get ingress platform -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)
-            [ -n "$IP" ] && echo "Ingress IP: $IP" && break
-            sleep 10
-          done
-          if [ -z "$IP" ]; then
-            echo "Ingress did not obtain an IP in time" >&2
-            kubectl describe ingress platform
-            exit 1
-          fi
+          kubectl get ingress platform -o jsonpath='{.status.loadBalancer.ingress[0].ip}' || true
