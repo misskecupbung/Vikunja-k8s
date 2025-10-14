@@ -1,132 +1,140 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 # Currently i’m still cooking the dishes.
 =======
 # Vikunja Kubernetes & GKE Terraform Deployment
+=======
+# Vikunja on GKE (Terraform + Helm)
+>>>>>>> cb86d2f (add files)
 
-Infrastructure-as-Code + Helm chart to deploy the Vikunja Todo application on a Google Kubernetes Engine (GKE) cluster. Includes optional managed Cloud SQL (PostgreSQL) vs. self‑hosted Postgres, optional Keycloak IAM integration, and operational scripts.
+Minimal, production‑leaning deployment of Vikunja on Google Kubernetes Engine using Terraform (infra) and Helm (app). Optional components: Cloud SQL (Postgres), Keycloak for OIDC, Google Managed Certificate TLS, and GitHub Actions CI/CD.
 
-## Repository Structure
+---
 
+## 1. What You Get
+* GKE cluster + networking (Terraform)
+* (Optional) Cloud SQL Postgres or self‑hosted Postgres manifest
+* Helm charts: `vikunja` (API + frontend), `platform` (shared ingress), optional `keycloak`
+* Shared GCE Ingress with static global IP + (optional) managed TLS cert
+* OIDC wiring (Vikunja ↔ Keycloak) via environment variables
+
+## 2. Quick Start (Dev)
+Prereqs: gcloud, terraform >= 1.6, helm, authenticated to a GCP project.
+
+```bash
+PROJECT_ID="your-project"
+REGION="europe-west1" # adjust
+gsutil mb -p "$PROJECT_ID" -l $REGION gs://$PROJECT_ID-tf-state || true
+gsutil versioning set on gs://$PROJECT_ID-tf-state
+
+terraform init \
+  -backend-config="bucket=$PROJECT_ID-tf-state" \
+  -backend-config="prefix=terraform"
+
+terraform workspace new dev 2>/dev/null || true
+terraform workspace select dev
+export TF_VAR_db_password="$(openssl rand -base64 20)"
+terraform apply -var-file=environments/dev.tfvars -auto-approve
+
+gcloud container clusters get-credentials $(terraform output -raw gke_cluster_name) --region $(terraform output -raw region)
+helm upgrade --install vikunja charts/vikunja \
+  --set cloudsql.instanceConnectionName="$(terraform output -raw cloudsql_instance)" \
+  --set postgres.host=127.0.0.1
 ```
-modules/            # Terraform reusable modules (network, gke, cloudsql)
-charts/vikunja/     # Helm chart for the Vikunja application
-scripts/            # Helper scripts (deploy, destroy, monitor, debug, keycloak values)
-scripts/k8s/        # Raw k8s manifests (self-hosted postgres alternative)
-environments/       # tfvars per environment (dev, prod) (using Terraform workspaces)
-main.tf, variables.tf, outputs.tf  # Root Terraform
+
+Open (if DNS not configured):
+```bash
+kubectl port-forward svc/vikunja 8080:80
+open http://localhost:8080
 ```
 
-## Tooling Choices & Rationale
+## 3. Configuration Overview
+| Area | How |
+|------|-----|
+| DB | Cloud SQL (default) or self-hosted StatefulSet (`scripts/k8s/`). |
+| Auth (OIDC) | Keycloak realm `vikunja`; env vars `VIKUNJA_AUTH_OPENID_*`. |
+| Ingress | Single GCE ingress in `charts/platform`; host rules for Vikunja + Keycloak. |
+| TLS | Google Managed Certificate (add domain list to platform values). |
+| Scaling | HPA + resource requests/limits. |
+| Secrets | Plain k8s Secret now; recommend External Secrets (future). |
 
-1. Terraform: Provision GCP infrastructure (network, GKE cluster, Cloud SQL) declaratively, enabling stateful, reviewable changes and environment separation via tfvars.
-2. Helm: Package application level k8s manifests with parameterization (DB host, Cloud SQL proxy sidecar, autoscaling, ingress, network policy). Helm supports easy upgrades and rollback for the app.
-3. Managed DB (Cloud SQL) (default): Provides automated backups, PITR, HA (regional), patching, and reduces operational toil vs. self-hosting. A self-hosted Postgres StatefulSet manifest is supplied for completeness / local or cost‑sensitive scenarios.
-4. Optional Keycloak: Industry-standard OpenID Connect provider for IAM. Can be deployed via existing community/bitnami chart using `scripts/keycloak-values.yaml` as override.
-> Note: A legacy standalone `platform-ingress.yaml` file has been removed. The shared ingress is now managed exclusively by the `charts/platform` Helm chart for consistency and upgrade/rollback support.
-
-## Database Strategy Justification
-
-Production defaults to managed Cloud SQL due to:
-* High availability (regional) & automated failover.
-* Built-in backups + point-in-time recovery.
-* Reduced patching & security burden (managed OS, minor version updates).
-* Easier scaling (storage auto-resize, tier changes) without downtime.
-
-Self-hosted Postgres is included (StatefulSet + PVC) for local development, air‑gapped deployments, or cost constraints. Trade-offs: manual backups, upgrades, HA complexity (would need Patroni / Crunchy Operator), greater ops overhead.
-
-## Network & Performance Optimizations
-
-* VPC-native GKE with secondary IP ranges for Pods/Services → avoids IP exhaustion and enables alias IPs.
-* Calico NetworkPolicy enabled for least privilege east-west traffic controls.
-* NEGs (service annotation) for better L7 load balancing & HTTP health checks.
-* HorizontalPodAutoscaler + optional Vertical Pod Autoscaler at cluster level.
-* PodDisruptionBudget to maintain availability during node upgrades.
-* Resource requests/limits set for predictable scheduling; can tune after observing metrics.
-* Separate node pool (extend by adding another module) could isolate workloads by performance / cost class.
-* Readiness & liveness probes for fast failure detection and robust rollout gating.
-* Workload Identity (if enabled) to avoid long‑lived service account keys.
-
-## Security Considerations
-
-* NetworkPolicy restricts ingress to necessary ports only.
-* Secrets separated (DB password). For production replace inline secrets with Secret Manager + CSI driver or external-secrets operator.
-* Optionally enable private SQL + Cloud SQL Auth Proxy sidecar to avoid public DB exposure.
-* IAM granularity with Workload Identity instead of static keys.
-
-## Keycloak Integration (Optional)
-
-Deploy Keycloak (example using bitnami chart):
-
+## 4. Key Helm Values (Vikunja)
+```yaml
+openid:
+  enabled: true
+  issuer: https://keycloak.example.com/realms/vikunja
+  clientId: vikunja-web
+  redirectURL: https://vikunja.example.com/auth/openid/callback
+  confidentialClient: false
 ```
+`VIKUNJA_SERVICE_PUBLICURL` is built from `ingress.host` (even though ingress is centralised). Keep it aligned with the external hostname.
+
+## 5. Enabling Keycloak (Optional)
+```bash
 helm repo add bitnami https://charts.bitnami.com/bitnami
 helm upgrade --install keycloak bitnami/keycloak -f scripts/keycloak-values.yaml
 ```
-
-Update `values.yaml` of Vikunja with `keycloak.enabled=true` and set `keycloak.issuer` to the deployed realm URL. Adjust Vikunja config map to include client secret (store in a secret, not plaintext) for production.
-
-## Deploy (Dev Example)
-
-Prerequisites: `gcloud`, `terraform >=1.6`, `helm`, authenticated to GCP, project created.
-
-### 1. Create GCS bucket for Terraform state
-
+Then set Vikunja values (or `--set`) for issuer + redirectURL. In Keycloak client `vikunja-web` add redirect URI:
 ```
-PROJECT_ID=$YOUR_PROJECT
-gsutil mb -p "$PROJECT_ID" -c STANDARD -l europe-west1 gs://$PROJECT_ID-tf-state
-gsutil versioning set on gs://$PROJECT_ID-tf-state
+https://vikunja.example.com/auth/openid/callback
 ```
+And Web Origin: `https://vikunja.example.com`.
 
-### 2. Create Terraform service account + Workload Identity Federation (for GitHub CI)
-
+## 6. Domains & TLS
+1. Reserve/identify a static global IP (Ingress annotation or pre-created).
+2. Create A records:
 ```
-gcloud iam service-accounts create terraform --display-name="Terraform SA"
-gcloud projects add-iam-policy-binding $PROJECT_ID \
-	--member="serviceAccount:terraform@$PROJECT_ID.iam.gserviceaccount.com" \
-	--role="roles/owner" # narrow later
-
-# (Optional) Workload Identity Federation for GitHub
-gcloud iam workload-identity-pools create github-pool --project=$PROJECT_ID --location=global --display-name="GitHub Pool"
-gcloud iam workload-identity-pools providers create-oidc github-provider \
-	--project=$PROJECT_ID --location=global --workload-identity-pool=github-pool \
-	--display-name="GitHub Provider" --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository" \
-	--issuer-uri="https://token.actions.githubusercontent.com"
-gcloud iam service-accounts add-iam-policy-binding terraform@$PROJECT_ID.iam.gserviceaccount.com \
-	--project=$PROJECT_ID \
-	--role="roles/iam.workloadIdentityUser" \
-	--member="principalSet://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github-pool/attribute.repository/OWNER/REPO"
+vikunja.example.com  A  <STATIC_IP>
+keycloak.example.com A  <STATIC_IP>
 ```
+3. Add ManagedCertificate manifest (or use `charts/platform` value) listing both domains.
+4. Wait for status: `kubectl describe managedcertificate <name>` → ACTIVE.
 
-Add these GitHub repository secrets:
+## 7. CI/CD (GitHub Actions)
+Secrets typically required:
+* GCP_PROJECT_ID
+* GCP_REGION
+* GCP_WIF_PROVIDER (Workload Identity provider resource name)
+* GCP_TERRAFORM_SA (service account email)
+* TF_STATE_BUCKET
 
-* `GCP_PROJECT_ID` – your project id
-* `GCP_REGION` – e.g. europe-west1
-* `GCP_WIF_PROVIDER` – full resource name of workload identity provider (e.g. `projects/123456789/locations/global/workloadIdentityPools/github-pool/providers/github-provider`)
-* `GCP_TERRAFORM_SA` – `terraform@PROJECT_ID.iam.gserviceaccount.com`
-* `TF_STATE_BUCKET` – name of your state bucket
+Workflow flow:
+* PR → terraform plan (dev workspace) + helm lint
+* Merge to main → terraform apply (prod workspace) + helm upgrade
 
-### 3. Initialize backend & create/select workspaces
+## 8. Rollbacks
+* App: `helm rollback vikunja <rev>`
+* Infra: revert commit → `terraform apply`
 
-Using Terraform workspaces instead of per-env backend config files.
-
-```
-export TF_VAR_db_password="$(openssl rand -base64 20)"   # or fetch from Secret Manager
-terraform init -backend-config="bucket=$PROJECT_ID-tf-state" -backend-config="prefix=terraform"
-
-# First time only (creates persistent workspace state objects):
-terraform workspace new dev || true
-terraform workspace new prod || true
-
-# Work in dev
-terraform workspace select dev
-terraform plan -var-file=environments/dev.tfvars
-terraform apply -var-file=environments/dev.tfvars -auto-approve
-
-gcloud container clusters get-credentials $(terraform output -raw gke_cluster_name) --region $(terraform output -raw region 2>/dev/null || echo europe-west1)
+## 9. Self‑Hosted Postgres (Alternative)
+Disable Cloud SQL in tfvars (`enable_cloudsql=false`), apply Postgres manifest, then:
+```bash
 helm upgrade --install vikunja charts/vikunja \
-  --set cloudsql.instanceConnectionName="$(terraform output -raw cloudsql_instance)" \
-  --set postgres.host=127.0.0.1 # via cloud sql proxy sidecar
+  --set cloudsql.enabled=false \
+  --set postgres.host=postgres.default.svc.cluster.local
 ```
 
+## 10. Troubleshooting OIDC
+* Check env: `kubectl exec deploy/vikunja -c api -- printenv | grep VIKUNJA_AUTH_OPENID`
+* Discovery URL: `curl https://keycloak.example.com/realms/vikunja/.well-known/openid-configuration`
+* If providers list is empty in `/api/v1/info`: ensure redirectURL matches Keycloak client redirect exactly and restart deployment.
+
+## 11. Hardening (Next Steps)
+Short list of recommended follow-ups:
+* External Secrets + Secret Manager for DB & OIDC secrets
+* Private Cloud SQL + Cloud SQL Auth Proxy sidecar
+* Fine-grained IAM instead of broad roles
+* NetworkPolicy (restrict egress to DB + Keycloak + DNS)
+* Prometheus/Grafana stack & alerting
+* Automated Keycloak realm bootstrap job
+
+## 12. Clean Up
+```bash
+terraform workspace select dev
+terraform destroy -var-file=environments/dev.tfvars -auto-approve
+```
+
+<<<<<<< HEAD
 To deploy prod locally:
 ```
 terraform workspace select prod
@@ -281,3 +289,7 @@ Makefile targets ease local workflows (`make init plan apply helm-template`).
 
 This is a reference implementation for interview purposes; hard-coded sample values (passwords, hosts) must be replaced with secure secret management and environment-specific overrides before production use.
 >>>>>>> c10c5cb (refine egress)
+=======
+## 13. Disclaimer
+Sample values are not production-ready. Replace demo passwords, enable managed secrets, and review security posture before real-world use.
+>>>>>>> cb86d2f (add files)
