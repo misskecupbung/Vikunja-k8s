@@ -208,8 +208,8 @@ jobs:
             --set postgres.host=127.0.0.1 \
             --set openid.enabled=true \
             --set openid.issuer="https://$KEYCLOAK_HOST/realms/vikunja" \
-            --set openid.redirectURL="https://$VIKUNJA_HOST/auth/openid/callback" \
-            --set openid.clientId=vikunja-web \
+            --set openid.redirectURL="https://vikunja.misskecupbung.xyz/auth/openid/keycloak" \
+            --set openid.clientId=vikunja \
             --wait --timeout 10m
       - name: Helm Deploy Platform Ingress
         run: |
