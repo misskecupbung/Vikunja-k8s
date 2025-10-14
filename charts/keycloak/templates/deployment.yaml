@@ -15,16 +15,6 @@ spec:
         app: keycloak
     spec:
       serviceAccountName: keycloak
-      initContainers:
-        - name: wait-for-cloudsql-proxy-config
-          image: busybox:1.36
-          command: ["/bin/sh","-c"]
-          args:
-            - |
-              if [ "{{ .Values.cloudsql.enabled }}" != "true" ]; then echo "cloudsql disabled - skip"; exit 0; fi
-              if [ -z "{{ .Values.cloudsql.instanceConnectionName }}" ]; then echo "ERROR: instanceConnectionName empty"; exit 1; fi
-              echo "Config looks OK";
-              exit 0
       containers:
         - name: keycloak
           image: quay.io/keycloak/keycloak:24.0.1
@@ -100,10 +90,8 @@ spec:
               memory: 1.5Gi
         - name: cloud-sql-proxy
           image: "{{ .Values.cloudsql.image }}"
-          # Instance connection name must be set via values override file or --set
           command:
             - /cloud_sql_proxy
-            - -log_debug_stdout
             - -instances={{ required "cloudsql.instanceConnectionName is required" .Values.cloudsql.instanceConnectionName }}=tcp:5432
           securityContext:
             runAsNonRoot: true
