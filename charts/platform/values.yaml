@@ -3,7 +3,7 @@ hosts:
   vikunja: vikunja.misskecupbung.xyz
   keycloak: keycloak.misskecupbung.xyz
 ingressClass: gce
-
+  # Adding managed certificate support
 managedCertificate:
   enabled: true
   name: vikunja-ingress-cert
