@@ -164,19 +164,15 @@ jobs:
 
       - name: Helm Deploy Keycloak
         run: |
-          # Retrieve Cloud SQL public IP using gcloud (no terraform needed in this job)
-          if [ -z "${CLOUDSQL_INSTANCE}" ]; then
-            echo "CLOUDSQL_INSTANCE env var not set" >&2; exit 1
-          fi
-          DB_HOST=$(gcloud sql instances describe "${CLOUDSQL_INSTANCE}" --format="value(ipAddresses[0].ipAddress)" || true)
-          if [ -z "$DB_HOST" ]; then
-            echo "Failed to obtain public IP for instance ${CLOUDSQL_INSTANCE}" >&2; exit 1
-          fi
-          echo "Using Cloud SQL host: $DB_HOST"
+          if [ -z "${CLOUDSQL_INSTANCE}" ]; then echo "CLOUDSQL_INSTANCE env var not set" >&2; exit 1; fi
+          if [ -z "${{ secrets.GCP_REGION }}" ]; then echo "GCP_REGION secret not set" >&2; exit 1; fi
+          INSTANCE_CONNECTION="${{ secrets.GCP_PROJECT_ID }}:${{ secrets.GCP_REGION }}:${CLOUDSQL_INSTANCE}"
+          echo "Using Cloud SQL instance connection: $INSTANCE_CONNECTION (proxy mode)"
           set -e
           if ! helm upgrade --install keycloak charts/keycloak -f charts/keycloak/values-ci.yaml \
-            --set database.host=$DB_HOST \
-            --set cloudsql.enabled=false \
+            --set cloudsql.enabled=true \
+            --set cloudsql.instanceConnectionName=$INSTANCE_CONNECTION \
+            --set database.host=127.0.0.1 \
             --set ingress.enabled=false \
             --set hostnameOverride=$KEYCLOAK_HOST \
             --set realm.clients[0].redirectUris[0]="https://$VIKUNJA_HOST/*" \
@@ -217,23 +213,19 @@ jobs:
 
       - name: Helm Deploy Vikunja
         run: |
-          # Retrieve Cloud SQL public IP similar to Keycloak deployment
-          if [ -z "${CLOUDSQL_INSTANCE}" ]; then
-            echo "CLOUDSQL_INSTANCE env var not set" >&2; exit 1
-          fi
-          DB_HOST=$(gcloud sql instances describe "${CLOUDSQL_INSTANCE}" --format="value(ipAddresses[0].ipAddress)" || true)
-          if [ -z "$DB_HOST" ]; then
-            echo "Failed to obtain public IP for instance ${CLOUDSQL_INSTANCE}" >&2; exit 1
-          fi
-          echo "Using Cloud SQL host for Vikunja: $DB_HOST"
+          if [ -z "${CLOUDSQL_INSTANCE}" ]; then echo "CLOUDSQL_INSTANCE env var not set" >&2; exit 1; fi
+          if [ -z "${{ secrets.GCP_REGION }}" ]; then echo "GCP_REGION secret not set" >&2; exit 1; fi
+          INSTANCE_CONNECTION="${{ secrets.GCP_PROJECT_ID }}:${{ secrets.GCP_REGION }}:${CLOUDSQL_INSTANCE}"
+          echo "Using Cloud SQL instance connection (proxy): $INSTANCE_CONNECTION"
           set -e
           if ! helm upgrade --install vikunja charts/vikunja -f charts/vikunja/values-ci.yaml \
-            --set cloudsql.enabled=false \
+            --set cloudsql.enabled=true \
+            --set cloudsql.instanceConnectionName=$INSTANCE_CONNECTION \
             --set ingress.enabled=false \
-            --set postgres.host=$DB_HOST \
+            --set postgres.host=127.0.0.1 \
             --set openid.enabled=true \
             --set openid.issuer="https://$KEYCLOAK_HOST/realms/vikunja" \
-            --set openid.redirectURL="https://$VIKUNJA_HOST/" \
+            --set openid.redirectURL="https://$VIKUNJA_HOST/auth/openid/callback" \
             --set openid.clientId=vikunja-web \
             --wait --timeout 10m; then
             echo "Helm install/upgrade failed; dumping pod diagnostics:" >&2

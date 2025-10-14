@@ -17,15 +17,7 @@ spec:
       containers:
         - name: keycloak
           image: quay.io/keycloak/keycloak:24.0.1
-          command:
-            - /opt/keycloak/bin/kc.sh
-          args:
-            - start
-            - --http-enabled=true
-            - --hostname-strict=false
-            - --proxy=edge
-            - --cache=local
-            - --health-enabled=true
+          command: ["/opt/keycloak/bin/kc.sh","start","--http-enabled=true","--hostname-strict=false","--proxy=edge","--cache=local","--health-enabled=true"]
           env:
             - name: KEYCLOAK_ADMIN
               valueFrom:
@@ -43,6 +35,8 @@ spec:
               value: "{{ if .Values.cloudsql.enabled }}127.0.0.1{{ else }}{{ .Values.database.host }}{{ end }}"
             - name: KC_DB_URL_DATABASE
               value: "{{ .Values.database.name }}"
+            - name: KC_DB_URL_PORT
+              value: "5432"
             - name: KC_DB_USERNAME
               value: "{{ .Values.database.user }}"
             - name: KC_DB_PASSWORD
@@ -93,3 +87,19 @@ spec:
             limits:
               cpu: "1"
               memory: 1.5Gi
+        - name: cloud-sql-proxy
+          image: "{{ .Values.cloudsql.image }}"
+          command:
+            - /bin/sh
+            - -c
+            - |
+              if [ "{{ .Values.cloudsql.enabled }}" = "true" ] && [ -n "{{ .Values.cloudsql.instanceConnectionName }}" ]; then
+                echo "Starting Cloud SQL Proxy for instance {{ .Values.cloudsql.instanceConnectionName }}";
+                exec /cloud_sql_proxy -instances={{ .Values.cloudsql.instanceConnectionName }}=tcp:5432;
+              else
+                echo "Cloud SQL Proxy disabled (cloudsql.enabled!=true or instanceConnectionName empty); sleeping";
+                sleep 3600;
+              fi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
