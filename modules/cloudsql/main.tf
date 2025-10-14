@@ -28,7 +28,6 @@ resource "google_sql_database_instance" "this" {
       hour = 3
     }
     ip_configuration {
-      # For dev simplicity we enable public IPv4; set to false and supply private_network for production
       ipv4_enabled    = var.enable_public_ip
       private_network = var.private_network
       dynamic "authorized_networks" {
@@ -55,7 +54,6 @@ resource "google_sql_user" "user" {
   password = var.db_password
 }
 
-# Optional Keycloak dedicated database & user (created only if variables provided)
 resource "google_sql_database" "keycloak" {
   count    = var.keycloak_db_name != null ? 1 : 0
   name     = var.keycloak_db_name

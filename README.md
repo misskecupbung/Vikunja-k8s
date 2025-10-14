@@ -117,6 +117,17 @@ Workflow flow:
 * PR → terraform plan (dev workspace) + helm lint
 * Merge to main → terraform apply (prod workspace) + helm upgrade
 
+### Single File Helm Values (Dev Simplification)
+For a dev-only focus the previous `values-ci.yaml` overrides were merged into each chart's primary `values.yaml`:
+* `charts/keycloak/values-ci.yaml` removed → ingress enabled by default + example realm client.
+* `charts/vikunja/values-ci.yaml` removed → dev replica count (1), ingress enabled, lighter resources, `keycloak.enabled=true`.
+
+If you later reintroduce separate environment overrides (e.g., production), recreate files like `values-prod.yaml` and pass them after the base file:
+```bash
+helm upgrade --install vikunja charts/vikunja -f charts/vikunja/values.yaml -f charts/vikunja/values-prod.yaml
+```
+Base files now reflect the dev defaults; use `--set` for occasional one-off differences.
+
 ## 8. Rollbacks
 * App: `helm rollback vikunja <rev>`
 * Infra: revert commit → `terraform apply`

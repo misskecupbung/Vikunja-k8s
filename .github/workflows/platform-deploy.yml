@@ -49,6 +49,11 @@ jobs:
           workload_identity_provider: ${{ env.WIF_PROVIDER }}
           service_account: ${{ env.TERRAFORM_SA }}
       - uses: google-github-actions/setup-gcloud@v3
+      - name: Helm Lint (Charts)
+        run: |
+          helm lint charts/vikunja || exit 1
+          helm lint charts/keycloak || exit 1
+          helm lint charts/platform || exit 1
       - name: Helm Template (Vikunja)
         run: helm template vikunja charts/vikunja -f charts/vikunja/values.yaml > rendered.yaml
       - name: Install kubeconform
@@ -163,11 +168,10 @@ jobs:
       - name: Helm Deploy Keycloak
         run: |
           INSTANCE_CONNECTION="$PROJECT_ID:$REGION:$CLOUDSQL_INSTANCE"
-          helm upgrade --install keycloak charts/keycloak -f charts/keycloak/values-ci.yaml \
+          helm upgrade --install keycloak charts/keycloak -f charts/keycloak/values.yaml \
             --set cloudsql.enabled=true \
             --set cloudsql.instanceConnectionName=$INSTANCE_CONNECTION \
             --set database.host=127.0.0.1 \
-            --set ingress.enabled=false \
             --set hostnameOverride=$KEYCLOAK_HOST \
             --set realm.clients[0].redirectUris[0]="https://$VIKUNJA_HOST/*" \
             --set realm.enabled=true \
@@ -198,10 +202,9 @@ jobs:
       - name: Helm Deploy Vikunja
         run: |
           INSTANCE_CONNECTION="$PROJECT_ID:$REGION:$CLOUDSQL_INSTANCE"
-          helm upgrade --install vikunja charts/vikunja -f charts/vikunja/values-ci.yaml \
+          helm upgrade --install vikunja charts/vikunja -f charts/vikunja/values.yaml \
             --set cloudsql.enabled=true \
             --set cloudsql.instanceConnectionName=$INSTANCE_CONNECTION \
-            --set ingress.enabled=false \
             --set postgres.host=127.0.0.1 \
             --set openid.enabled=true \
             --set openid.issuer="https://$KEYCLOAK_HOST/realms/vikunja" \

@@ -7,29 +7,30 @@ frontend:
   enabled: true
   image: vikunja/frontend:0.21.0
 
-replicaCount: 2
+replicaCount: 1
 
 cloudsql:
   enabled: false
-  instanceConnectionName: "" # filled via --set or values override
+  instanceConnectionName: ""
 
 service:
   type: ClusterIP
   port: 80
 
 ingress:
-  enabled: false          # Disabled; platform shared ingress handles public exposure
+  enabled: true
   className: "gce"
-  host: vikunja.misskecupbung.xyz   # Still used to build VIKUNJA_SERVICE_PUBLICURL env
-  annotations: {}
+  host: vikunja.misskecupbung.xyz
+  annotations:
+    kubernetes.io/ingress.class: gce
   tls: []
 
 resources:
-  limits:
-    cpu: 500m
-    memory: 512Mi
   requests:
-    cpu: 200m
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 400m
     memory: 256Mi
 
 autoscaling:
@@ -47,16 +48,16 @@ tolerations: []
 affinity: {}
 
 postgres:
-  host: "" # when using external managed DB
+  host: ""
   user: vikunja
   password: vikunja
   database: vikunja
-  secretName: vikunja-db        # Kubernetes Secret created externally (workflow)
-  passwordKey: password         # Key inside secret containing the DB password
+  secretName: vikunja-db
+  passwordKey: password
 
 externalSecrets:
   enabled: false
-  secretName: vikunja-db-credentials    # name of ExternalSecret and produced Secret
+  secretName: vikunja-db-credentials
   refreshInterval: 1h
   secretStoreRef:
     name: gcp-secretstore
@@ -68,7 +69,7 @@ externalSecrets:
 
 
 keycloak:
-  enabled: false
+  enabled: true
   issuer: "https://keycloak.example.com/realms/vikunja"
 
 openid:
@@ -77,10 +78,9 @@ openid:
   clientId: "vikunja-web"
   confidentialClient: false
   secretName: "vikunja-oidc-client"
-  redirectURL: "https://vikunja.misskecupbung.xyz/auth/openid/callback"  # Explicit callback path
+  redirectURL: "https://vikunja.misskecupbung.xyz/auth/openid/callback"
   scopes: "openid profile email"
 
-# Optional: set to debug for deeper startup diagnostics (info|debug|trace)
 logLevel: "info"
 
 networkPolicy:

@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "vikunja.fullname" . }}
+  name: vikunja
   labels:
-    app: {{ include "vikunja.name" . }}
+    app: vikunja
 spec:
   replicas: {{ .Values.replicaCount }}
   revisionHistoryLimit: 5
   selector:
     matchLabels:
-      app: {{ include "vikunja.name" . }}
+      app: vikunja
   template:
     metadata:
       labels:
-        app: {{ include "vikunja.name" . }}
+        app: vikunja
     spec:
       serviceAccountName: vikunja
       containers:
@@ -29,7 +29,7 @@ spec:
             - name: VIKUNJA_DATABASE_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.postgres.secretName | default (printf "%s-secret" (include "vikunja.fullname" .)) }}
+                  name: {{ .Values.postgres.secretName | default "vikunja" }}
                   key: {{ .Values.postgres.passwordKey | default "DB_PASSWORD" }}
             - name: VIKUNJA_DATABASE_DATABASE
               value: {{ .Values.postgres.database | quote }}

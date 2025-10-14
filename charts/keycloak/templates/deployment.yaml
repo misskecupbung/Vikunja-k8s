@@ -88,11 +88,12 @@ spec:
             limits:
               cpu: "1"
               memory: 1.5Gi
+        {{- if and .Values.cloudsql.enabled .Values.cloudsql.instanceConnectionName }}
         - name: cloud-sql-proxy
           image: "{{ .Values.cloudsql.image }}"
           command:
             - /cloud_sql_proxy
-            - -instances={{ required "cloudsql.instanceConnectionName is required" .Values.cloudsql.instanceConnectionName }}=tcp:5432
+            - -instances={{ .Values.cloudsql.instanceConnectionName }}=tcp:5432
           securityContext:
             runAsNonRoot: true
             runAsUser: 65534
@@ -103,3 +104,4 @@ spec:
             limits:
               cpu: 200m
               memory: 256Mi
+        {{- end }}

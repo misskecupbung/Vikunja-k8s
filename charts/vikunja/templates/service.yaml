@@ -1,14 +1,14 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "vikunja.fullname" . }}
+  name: vikunja
   labels:
-    app: {{ include "vikunja.name" . }}
+    app: vikunja
   annotations:
     cloud.google.com/neg: '{"ingress": true}'
 spec:
   selector:
-    app: {{ include "vikunja.name" . }}
+    app: vikunja
   ports:
     # Frontend web UI
     - name: web

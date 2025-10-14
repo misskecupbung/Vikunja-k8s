@@ -34,7 +34,7 @@ output "keycloak_db_user" {
 }
 
 output "platform_lb_ip_name" {
-  value       = var.global_lb_ip_name
+  value       = var.platform_lb_ip_name
   description = "Name of the global static IP reserved for the platform ingress"
 }
 

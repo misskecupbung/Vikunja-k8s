@@ -71,7 +71,6 @@ variable "authorized_networks" {
   description = "List of authorized public CIDR networks to allow (public IPv4). Use narrow ranges; avoid 0.0.0.0/0 in production."
 }
 
-# Optional secondary (Keycloak) database & user
 variable "keycloak_db_name" {
   type        = string
   default     = null

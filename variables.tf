@@ -45,12 +45,6 @@ variable "enable_cloudsql" {
   description = "Toggle to provision managed Cloud SQL (otherwise use self-hosted Postgres)"
 }
 
-variable "db_password" {
-  type        = string
-  sensitive   = true
-  default     = null
-  description = "(Deprecated) Use vikunja_db_password instead. Retained for backward compatibility."
-}
 
 variable "vikunja_db_password" {
   type        = string
@@ -58,7 +52,6 @@ variable "vikunja_db_password" {
   description = "Password for the primary Vikunja application database user (supply via TF_VAR_vikunja_db_password)."
 }
 
-# Primary Vikunja application database logical name & user (allows changing from default 'vikunja')
 variable "vikunja_db_name" {
   type        = string
   default     = "vikunja"
@@ -71,7 +64,6 @@ variable "vikunja_db_user" {
   description = "Primary Vikunja database user"
 }
 
-# Sizing variables (override in per-environment tfvars)
 variable "gke_min_nodes" {
   type        = number
   default     = 1
@@ -123,7 +115,6 @@ variable "authorized_networks" {
   description = "Authorized public CIDR networks for Cloud SQL (passed through to module). Keep empty or narrow; avoid 0.0.0.0/0 in prod."
 }
 
-# Keycloak dedicated database configuration
 variable "keycloak_db_name" {
   type        = string
   default     = "keycloak" # corrected spelling
@@ -143,7 +134,7 @@ variable "keycloak_db_password" {
   description = "Password for the Keycloak DB user (supply via TF_VAR_keycloak_db_password). If null, Terraform will not attempt to manage the user password (manual)."
 }
 
-variable "global_lb_ip_name" {
+variable "platform_lb_ip_name" {
   type        = string
   default     = "vikunja-platform-lb-ip"
   description = "Name of the global static IPv4 address reserved for the GCE Ingress load balancer."
