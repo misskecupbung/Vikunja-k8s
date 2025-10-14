@@ -90,6 +90,21 @@ keycloak.example.com A  <STATIC_IP>
 3. Add ManagedCertificate manifest (or use `charts/platform` value) listing both domains.
 4. Wait for status: `kubectl describe managedcertificate <name>` → ACTIVE.
 
+### Using Terraform-Managed Static IP
+This repo now provisions a global static IP via Terraform (`google_compute_global_address.platform_lb`).
+
+After `terraform apply`:
+```bash
+terraform output platform_lb_ip_address
+terraform output platform_lb_ip_name
+```
+Set the Helm value (already defaults correctly) or override:
+```bash
+helm upgrade --install platform charts/platform \
+  --set staticIpName=$(terraform output -raw platform_lb_ip_name)
+```
+Point DNS A records to the `platform_lb_ip_address` value.
+
 ## 7. CI/CD (GitHub Actions)
 Secrets typically required:
 * GCP_PROJECT_ID

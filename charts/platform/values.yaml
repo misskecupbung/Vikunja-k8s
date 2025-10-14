@@ -1,4 +1,4 @@
-staticIpName: todo-platform-lb-ip
+staticIpName: vikunja-platform-lb-ip
 hosts:
   vikunja: vikunja.misskecupbung.xyz
   keycloak: keycloak.misskecupbung.xyz
