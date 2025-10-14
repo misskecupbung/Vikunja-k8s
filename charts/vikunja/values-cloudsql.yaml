@@ -1,0 +1,8 @@
+# Overrides to enable Cloud SQL Proxy for Vikunja
+cloudsql:
+  enabled: true
+  instanceConnectionName: "sixth-bonbon-475003-q2:us-central1:vikunja-db"
+
+# Point Vikunja DB host to local proxy
+postgres:
+  host: 127.0.0.1
