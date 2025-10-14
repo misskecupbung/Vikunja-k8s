@@ -2,7 +2,7 @@ database:
   host: vikunja-db.public-ip-or-dns   # Replaced in CI pipeline with gcloud-derived Cloud SQL public IP
   name: keycloak                       # Dedicated Keycloak DB (managed via Terraform)
   user: keycloak                       # Dedicated Keycloak DB user
-  parameters: "?sslmode=require"
+  parameters: "?sslmode=disable"
 
 ingress:
   enabled: true

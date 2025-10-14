@@ -3,13 +3,13 @@ image:
   tag: 24.0.1
 
 database:
-  host: 0.0.0.0            # Overridden via --set database.host=<cloudsql_public_ip>
+  host: 0.0.0.0
   name: keycloak
   user: keycloak
-  parameters: "?sslmode=require"  # Additional JDBC parameters (prefixed with '?' for proper URL formatting)
+  parameters: "?sslmode=disable" 
 
 cloudsql:
-  enabled: false            # Direct mode default; enable for proxy approach
+  enabled: false
   instanceConnectionName: "" # Only used if enabled
   image: gcr.io/cloudsql-docker/gce-proxy:1.37.0
   resources:
@@ -22,11 +22,11 @@ cloudsql:
 
 serviceAccount:
   create: true
-  name: ""  # If empty, will default to chart fullname
+  name: "" 
   annotations: {}
   workloadIdentity:
     enabled: false
-    gsaEmail: "" # e.g. vikunja-workloads@sixth-bonbon-475003-q2.iam.gserviceaccount.com
+    gsaEmail: ""
 
 ingress:
   enabled: false
@@ -35,15 +35,12 @@ ingress:
   annotations: {}
   tls: []
 
-# Explicit hostname when using shared platform ingress (ingress.enabled=false)
 hostnameOverride: "keycloak.misskecupbung.xyz"
 
-# Realm bootstrap configuration (executed via a Helm post-install/upgrade Job when enabled)
 realm:
-  enabled: false # disabled pending simplified bootstrap job fix
+  enabled: false
   name: vikunja
   clients: []
 
-# Post-install Job toggle (realm.enabled controls creation; this is a secondary master switch if desired)
 postInstall:
   enabled: true
