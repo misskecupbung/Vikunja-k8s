@@ -6,6 +6,8 @@ module "network" {
   subnet_cidr              = var.subnet_cidr
   pods_secondary_range     = var.pods_cidr
   services_secondary_range = var.services_cidr
+  enable_cloud_nat         = var.enable_cloud_nat
+  nat_allocate_option      = var.nat_allocate_option
 }
 
 module "gke" {
@@ -26,6 +28,9 @@ module "gke" {
   enable_workload_identity        = true
   enable_vertical_pod_autoscaling = false
   labels                          = { env = "dev" }
+  enable_private_nodes            = var.enable_private_nodes
+  enable_private_endpoint         = var.enable_private_endpoint
+  master_ipv4_cidr_block          = var.master_ipv4_cidr_block
 }
 
 # Delay to allow service networking peering to propagate before creating Cloud SQL private IP instance

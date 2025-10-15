@@ -50,3 +50,27 @@ resource "google_service_networking_connection" "private_vpc_connection" {
   service                 = "servicenetworking.googleapis.com"
   reserved_peering_ranges = [google_compute_global_address.private_service_range.name]
 }
+
+# Optional Cloud NAT for private nodes outbound internet access
+resource "google_compute_router" "nat_router" {
+  count   = var.enable_cloud_nat ? 1 : 0
+  name    = "${var.network_name}-nat-router"
+  project = var.project_id
+  region  = var.region
+  network = google_compute_network.this.id
+}
+
+resource "google_compute_router_nat" "nat" {
+  count                              = var.enable_cloud_nat ? 1 : 0
+  name                               = "${var.network_name}-nat"
+  project                            = var.project_id
+  region                             = var.region
+  router                             = google_compute_router.nat_router[0].name
+  nat_ip_allocate_option             = var.nat_allocate_option
+  source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
+  enable_endpoint_independent_mapping = true
+  log_config {
+    enable = true
+    filter = "ERRORS_ONLY"
+  }
+}

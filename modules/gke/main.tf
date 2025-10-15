@@ -27,6 +27,15 @@ resource "google_container_cluster" "this" {
     services_secondary_range_name = var.services_secondary_range_name
   }
 
+  dynamic "private_cluster_config" {
+    for_each = var.enable_private_nodes ? [1] : []
+    content {
+      enable_private_nodes    = var.enable_private_nodes
+      enable_private_endpoint = var.enable_private_endpoint
+      master_ipv4_cidr_block  = var.master_ipv4_cidr_block
+    }
+  }
+
   workload_identity_config {
     workload_pool = var.enable_workload_identity ? "${var.project_id}.svc.id.goog" : null
   }

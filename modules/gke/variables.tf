@@ -71,6 +71,24 @@ variable "enable_vertical_pod_autoscaling" {
   description = "Enable cluster-level Vertical Pod Autoscaler"
 }
 
+variable "enable_private_nodes" {
+  type        = bool
+  default     = false
+  description = "Create cluster with private nodes (no public IPs on VMs)"
+}
+
+variable "enable_private_endpoint" {
+  type        = bool
+  default     = false
+  description = "If true, restrict master/API server to private endpoint only (requires internal access)"
+}
+
+variable "master_ipv4_cidr_block" {
+  type        = string
+  default     = null
+  description = "RFC1918 /28 block for master endpoints when private cluster config is enabled (e.g. 172.16.0.0/28)"
+}
+
 variable "labels" {
   type        = map(string)
   default     = {}

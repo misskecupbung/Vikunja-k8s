@@ -139,3 +139,33 @@ variable "platform_lb_ip_name" {
   default     = "vikunja-platform-lb-ip"
   description = "Name of the global static IPv4 address reserved for the GCE Ingress load balancer."
 }
+
+variable "enable_private_nodes" {
+  type        = bool
+  default     = false
+  description = "Enable private GKE nodes (no external IPs). Requires Cloud NAT for outbound internet pulls."
+}
+
+variable "enable_private_endpoint" {
+  type        = bool
+  default     = false
+  description = "Restrict GKE control plane to private endpoint only (set true only if you have VPN/Interconnect or Connect Gateway)."
+}
+
+variable "master_ipv4_cidr_block" {
+  type        = string
+  default     = "172.16.0.0/28"
+  description = "RFC1918 /28 for master endpoint in private clusters. Must not overlap existing ranges."
+}
+
+variable "enable_cloud_nat" {
+  type        = bool
+  default     = false
+  description = "Provision Cloud NAT for outbound internet when using private nodes."
+}
+
+variable "nat_allocate_option" {
+  type        = string
+  default     = "AUTO_ONLY"
+  description = "Cloud NAT IP allocation option (AUTO_ONLY or MANUAL_ONLY)."
+}
