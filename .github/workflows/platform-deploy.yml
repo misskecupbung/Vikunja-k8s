@@ -33,6 +33,7 @@ env:
   KEYCLOAK_HOST: "keycloak.misskecupbung.xyz"
   VIKUNJA_HOST: "vikunja.misskecupbung.xyz"
   VIKUNJA_CLIENTSECRET: ${{ secrets.VIKUNJA_CLIENTSECRET }}
+  PROD_APPROVERS: "misskecupbung"
 
 jobs:
   plan:
@@ -127,9 +128,9 @@ jobs:
         uses: trstringer/manual-approval@v1
         with:
           secret: ${{ github.TOKEN }}
-          approvers: misskecupbung
+          approvers: ${{ env.PROD_APPROVERS }}
           minimum-approvals: 1
-          issue-title: "Prod Apply Approval (workspace: ${{ needs.prepare.outputs.workspace }})"
+          issue-title: "Prod Apply Approval (workspace: ${{ needs.plan.outputs.workspace }})"
           issue-body: "Approve to apply Terraform to production workspace."
       - name: Terraform Apply
         run: |

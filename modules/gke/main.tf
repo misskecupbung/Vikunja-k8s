@@ -9,11 +9,11 @@ terraform {
 }
 
 resource "google_container_cluster" "this" {
-  name       = var.cluster_name
-  project    = var.project_id
-  location   = coalesce(var.location, var.region)
-  network    = var.network_name
-  subnetwork = var.subnet_name
+  name                = var.cluster_name
+  project             = var.project_id
+  location            = coalesce(var.location, var.region)
+  network             = var.network_name
+  subnetwork          = var.subnet_name
   deletion_protection = var.cluster_deletion_protection
 
   remove_default_node_pool = true
