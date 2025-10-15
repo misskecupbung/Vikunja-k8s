@@ -52,13 +52,10 @@ openid:
   clientSecretKey: clientsecret
   providers:
     - name: Keycloak
-      authurl: https://keycloak.misskecupbung.xyz/realms/vikunja/protocol/openid-connect/auth
+      authurl: https://keycloak.misskecupbung.xyz/realms/vikunja
       logouturl: https://keycloak.misskecupbung.xyz/realms/vikunja/protocol/openid-connect/logout
       clientid: vikunja
-      scopes:
-        - openid
-        - email
-        - profile
+      scope: openid email profile
 
 logLevel: "debug"
 

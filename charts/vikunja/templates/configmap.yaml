@@ -7,27 +7,21 @@ metadata:
 data:
   config.yml: |
     log:
-      level: {{ default .Values.logLevel .Values.config.logLevel | quote }}
+      level: {{ default .Values.logLevel .Values.config.logLevel }}
     service:
-      publicurl: {{ default (printf "https://%s" .Values.ingress.host) .Values.config.publicUrl | quote }}
+      publicurl: {{ default (printf "https://%s" .Values.ingress.host) .Values.config.publicUrl }}
     auth:
       local:
         enabled: true
       openid:
         enabled: {{ if .Values.openid.enabled }}true{{ else }}false{{ end }}
-        redirecturl: {{ printf "https://%s/auth/openid/" .Values.ingress.host | quote }}
+        redirecturl: {{ printf "https://%s/auth/openid/" .Values.ingress.host }}
         providers:
         {{- range .Values.openid.providers }}
-          - name: {{ .name | quote }}
-            authurl: {{ .authurl | quote }}
-            logouturl: {{ .logouturl | quote }}
-            clientid: {{ .clientid | quote }}
-            {{- if .clientsecret }}
-            clientsecret: {{ .clientsecret | quote }}
-            {{- end }}
-            scopes:
-            {{- $scopes := .scopes | default (splitList " " (.scope | default "")) -}}
-            {{- range $scopes }}
-              - {{ . | quote }}
-            {{- end }}
+          - name: {{ .name }}
+            authurl: {{ .authurl }}
+            logouturl: {{ .logouturl }}
+            clientid: {{ .clientid }}
+            {{- if .clientsecret }}clientsecret: {{ .clientsecret }}{{ end }}
+            scopes: {{ $scopes := .scopes | default (splitList " " (.scope | default "")) }}{{ range $i, $s := $scopes }}{{ if $i }} {{ end }}{{ $s }}{{ end }}
         {{- end }}
