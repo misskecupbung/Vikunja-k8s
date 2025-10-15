@@ -1,0 +1,22 @@
+# Terraform local directories & files
+.terraform/
+*.tfstate
+*.tfstate.backup
+crash.log
+
+# Helm cache
+**/charts/*/Chart.lock
+
+# Local editor settings
+.vscode/
+.DS_Store
+
+# Rendered manifests & temp files
+rendered.yaml
+/tmp/
+
+# Sensitive output
+*.out
+
+# Node / build caches (future expansion)
+node_modules/
