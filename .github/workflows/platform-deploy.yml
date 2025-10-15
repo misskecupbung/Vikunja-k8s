@@ -204,13 +204,10 @@ jobs:
           kubectl create secret generic vikunja-db \
             --from-literal=password="$VIKUNJA_DB_PASSWORD" \
             --dry-run=client -o yaml | kubectl apply -f -
-          # Create/Update OIDC client secret (not exposed in ConfigMap)
-          kubectl create secret generic vikunja-oidc-client \
-            --from-literal=clientsecret="$VIKUNJA_CLIENTSECRET" \
-            --dry-run=client -o yaml | kubectl apply -f -
           helm upgrade --install vikunja charts/vikunja -f charts/vikunja/values.yaml \
             --set cloudsql.enabled=true \
             --set cloudsql.instanceConnectionName=$INSTANCE_CONNECTION \
+            --set "openid.providers[0].clientsecret=$VIKUNJA_CLIENTSECRET" \
             --wait --timeout 10m
       - name: Helm Deploy Platform Ingress
         run: |

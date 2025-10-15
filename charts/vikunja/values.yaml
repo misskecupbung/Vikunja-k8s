@@ -50,6 +50,8 @@ postgres:
 openid:
   enabled: true
   secretName: "vikunja-oidc-client"
+  clientSecretSecretName: vikunja-oidc-client
+  clientSecretKey: clientsecret
   providers:
     - name: keycloak
       authurl: https://keycloak.misskecupbung.xyz/realms/vikunja/protocol/openid-connect/auth

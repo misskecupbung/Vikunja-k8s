@@ -34,11 +34,6 @@ spec:
               value: {{ .Values.postgres.database | quote }}
             - name: VIKUNJA_CONFIG
               value: "/etc/vikunja/config.yml"
-            - name: VIKUNJA_AUTH_OPENID_PROVIDERS_0_CLIENTSECRET
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.openid.secretName | quote }}
-                  key: clientsecret
           ports:
             - name: http
               containerPort: 3456

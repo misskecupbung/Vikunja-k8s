@@ -22,6 +22,9 @@ data:
             authurl: {{ .authurl | quote }}
             logouturl: {{ .logouturl | quote }}
             clientid: {{ .clientid | quote }}
+            {{- if .clientsecret }}
+            clientsecret: {{ .clientsecret | quote }}
+            {{- end }}
             scopes:
             {{- $scopes := .scopes | default (splitList " " (.scope | default "")) -}}
             {{- range $scopes }}
