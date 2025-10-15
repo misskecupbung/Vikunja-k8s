@@ -14,6 +14,7 @@ resource "google_container_cluster" "this" {
   location   = coalesce(var.location, var.region)
   network    = var.network_name
   subnetwork = var.subnet_name
+  deletion_protection = var.cluster_deletion_protection
 
   remove_default_node_pool = true
   initial_node_count       = 1

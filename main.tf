@@ -31,6 +31,7 @@ module "gke" {
   enable_private_nodes            = var.enable_private_nodes
   enable_private_endpoint         = var.enable_private_endpoint
   master_ipv4_cidr_block          = var.master_ipv4_cidr_block
+  cluster_deletion_protection     = var.cluster_deletion_protection
 }
 
 # Delay to allow service networking peering to propagate before creating Cloud SQL private IP instance

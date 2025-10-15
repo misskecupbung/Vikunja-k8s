@@ -169,3 +169,9 @@ variable "nat_allocate_option" {
   default     = "AUTO_ONLY"
   description = "Cloud NAT IP allocation option (AUTO_ONLY or MANUAL_ONLY)."
 }
+
+variable "cluster_deletion_protection" {
+  type        = bool
+  default     = false
+  description = "If true, prevents Terraform destroying the GKE cluster. Set to false to allow recreation (e.g., migrating to private nodes)."
+}

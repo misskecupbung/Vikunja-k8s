@@ -106,3 +106,9 @@ variable "location" {
   default     = null
   description = "Override location (zone) for a zonal cluster instead of regional. When null, region is used for a regional cluster."
 }
+
+variable "cluster_deletion_protection" {
+  type        = bool
+  default     = true
+  description = "Whether to enable deletion protection on the GKE cluster. Set to false to allow Terraform to destroy/recreate the cluster (e.g., when enabling private nodes)."
+}
