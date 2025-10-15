@@ -61,13 +61,13 @@ resource "google_compute_router" "nat_router" {
 }
 
 resource "google_compute_router_nat" "nat" {
-  count                              = var.enable_cloud_nat ? 1 : 0
-  name                               = "${var.network_name}-nat"
-  project                            = var.project_id
-  region                             = var.region
-  router                             = google_compute_router.nat_router[0].name
-  nat_ip_allocate_option             = var.nat_allocate_option
-  source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
+  count                               = var.enable_cloud_nat ? 1 : 0
+  name                                = "${var.network_name}-nat"
+  project                             = var.project_id
+  region                              = var.region
+  router                              = google_compute_router.nat_router[0].name
+  nat_ip_allocate_option              = var.nat_allocate_option
+  source_subnetwork_ip_ranges_to_nat  = "ALL_SUBNETWORKS_ALL_IP_RANGES"
   enable_endpoint_independent_mapping = true
   log_config {
     enable = true
