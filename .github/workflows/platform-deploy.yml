@@ -32,6 +32,7 @@ env:
   PLATFORM_LB_IP_NAME: "vikunja-platform-lb-ip"
   KEYCLOAK_HOST: "keycloak.misskecupbung.xyz"
   VIKUNJA_HOST: "vikunja.misskecupbung.xyz"
+  VIKUNJA_CLIENTSECRET: ${{ secrets.VIKUNJA_CLIENTSECRET }}
 
 jobs:
   plan:
@@ -196,20 +197,20 @@ jobs:
         with:
           cluster_name: ${{ env.CLUSTER_NAME }}
           location: ${{ env.CLUSTER_LOCATION }}
-      - name: Create Vikunja Secret
-        run: |
-          kubectl create secret generic vikunja-db --from-literal=password="$VIKUNJA_DB_PASSWORD" --dry-run=client -o yaml | kubectl apply -f -
       - name: Helm Deploy Vikunja
         run: |
           INSTANCE_CONNECTION="$PROJECT_ID:$REGION:$CLOUDSQL_INSTANCE"
+          # Create/Update Vikunja DB password secret (expected by deployment)
+          kubectl create secret generic vikunja-db \
+            --from-literal=password="$VIKUNJA_DB_PASSWORD" \
+            --dry-run=client -o yaml | kubectl apply -f -
+          # Create/Update OIDC client secret (not exposed in ConfigMap)
+          kubectl create secret generic vikunja-oidc-client \
+            --from-literal=clientsecret="$VIKUNJA_CLIENTSECRET" \
+            --dry-run=client -o yaml | kubectl apply -f -
           helm upgrade --install vikunja charts/vikunja -f charts/vikunja/values.yaml \
             --set cloudsql.enabled=true \
             --set cloudsql.instanceConnectionName=$INSTANCE_CONNECTION \
-            --set postgres.host=127.0.0.1 \
-            --set openid.enabled=true \
-            --set openid.issuer="https://$KEYCLOAK_HOST/realms/vikunja" \
-            --set openid.redirectURL="https://vikunja.misskecupbung.xyz/auth/openid/keycloak" \
-            --set openid.clientId=vikunja \
             --wait --timeout 10m
       - name: Helm Deploy Platform Ingress
         run: |

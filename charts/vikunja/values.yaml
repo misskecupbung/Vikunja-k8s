@@ -38,47 +38,31 @@ autoscaling:
   minReplicas: 2
   maxReplicas: 6
   targetCPUUtilizationPercentage: 70
-
-podDisruptionBudget:
-  enabled: true
-  minAvailable: 1
-
-nodeSelector: {}
-tolerations: []
 affinity: {}
 
 postgres:
-  host: ""
+  host: "127.0.0.1"
   user: vikunja
-  password: vikunja
   database: vikunja
   secretName: vikunja-db
   passwordKey: password
 
-externalSecrets:
-  enabled: false
-  secretName: vikunja-db-credentials
-  refreshInterval: 1h
-  secretStoreRef:
-    name: gcp-secretstore
-    kind: SecretStore
-  remoteRefs:
-    password:
-      key: projects/PROJECT_ID/secrets/vikunja-db-password
-      version: latest
-
-
 openid:
   enabled: true
-  issuer: "https://keycloak.misskecupbung.xyz/realms/vikunja"
-  clientId: "vikunja-web"
-  confidentialClient: false
   secretName: "vikunja-oidc-client"
-  redirectURL: "https://vikunja.misskecupbung.xyz/auth/openid/keycloak"
-  scopes: "openid profile email"
-  providerName: "keycloak"
+  providers:
+    - name: keycloak
+      authurl: https://keycloak.misskecupbung.xyz/realms/vikunja/protocol/openid-connect/auth
+      logouturl: https://keycloak.misskecupbung.xyz/realms/vikunja/protocol/openid-connect/logout
+      clientid: vikunja
+      scopes:
+        - openid
+        - email
+        - profile
 
 logLevel: "debug"
 
-networkPolicy:
+config:
   enabled: true
+  logLevel: "debug"
+  publicUrl: ""

@@ -5,8 +5,8 @@ variable "project_id" {
 
 variable "region" {
   type        = string
-  default     = "europe-west1"
-  description = "Primary region for regional resources"
+  default     = "us-central1"
+  description = "Primary region for regional resources (aligned with CI workflow)"
 }
 
 variable "network_cidr" {
