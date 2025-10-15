@@ -12,8 +12,8 @@ gke_disk_size_gb = 20
 # Cloud SQL sizing (dev)
 cloudsql_tier              = "db-f1-micro"
 cloudsql_availability_type = "ZONAL"
-enable_private_nodes       = true
-enable_private_endpoint    = false
-master_ipv4_cidr_block     = "172.16.0.0/28"
-enable_cloud_nat           = true
-nat_allocate_option        = "AUTO_ONLY"
+#enable_private_nodes       = true
+#enable_private_endpoint    = false
+#master_ipv4_cidr_block     = "172.16.0.0/28"
+#enable_cloud_nat           = true
+#nat_allocate_option        = "AUTO_ONLY"
