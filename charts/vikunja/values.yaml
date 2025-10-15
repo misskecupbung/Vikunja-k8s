@@ -49,11 +49,9 @@ postgres:
 
 openid:
   enabled: true
-  secretName: "vikunja-oidc-client"
-  clientSecretSecretName: vikunja-oidc-client
   clientSecretKey: clientsecret
   providers:
-    - name: keycloak
+    - name: Keycloak
       authurl: https://keycloak.misskecupbung.xyz/realms/vikunja/protocol/openid-connect/auth
       logouturl: https://keycloak.misskecupbung.xyz/realms/vikunja/protocol/openid-connect/logout
       clientid: vikunja
