@@ -117,7 +117,7 @@ variable "authorized_networks" {
 
 variable "keycloak_db_name" {
   type        = string
-  default     = "keycloak" # corrected spelling
+  default     = "keycloak"
   description = "Dedicated Keycloak database name on the shared Cloud SQL instance"
 }
 
@@ -172,6 +172,6 @@ variable "nat_allocate_option" {
 
 variable "cluster_deletion_protection" {
   type        = bool
-  default     = false
+  default     = true
   description = "If true, prevents Terraform destroying the GKE cluster. Set to false to allow recreation (e.g., migrating to private nodes)."
 }

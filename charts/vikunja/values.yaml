@@ -40,6 +40,14 @@ autoscaling:
   targetCPUUtilizationPercentage: 70
 affinity: {}
 
+pdb:
+  enabled: true
+  minAvailable: 1
+
+networkPolicy:
+  enabled: true
+  ingressControllerNamespace: "" # set to ingress controller namespace to restrict, empty allows all
+
 postgres:
   host: "127.0.0.1"
   user: vikunja
