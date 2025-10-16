@@ -1,0 +1,181 @@
+name: Terraform Apply Workflow
+
+on:
+  push:
+    branches:
+      - main          # production
+      - dev           # shared dev branch
+      - feature/**    # any feature branches (nested)
+  pull_request:
+    branches:
+      - main          # PRs into main still run plan (no auto-apply)
+  workflow_dispatch:   # manual trigger
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  TF_IN_AUTOMATION: true
+  GOOGLE_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
+  TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
+  TF_VAR_region: ${{ secrets.GCP_REGION }}
+
+jobs:
+  terraform-plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    outputs:
+      workspace: ${{ steps.set-ws.outputs.workspace }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
+
+      - name: Authenticate to Google Cloud (OIDC)
+        id: auth
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_TERRAFORM_SA }}
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v3
+
+      - name: Export DB password (GitHub Secret)
+        run: |
+          if [ -z "${{ secrets.VIKUNJA_DB_PASSWORD }}" ]; then
+            echo "Missing required GitHub secret VIKUNJA_DB_PASSWORD" >&2; exit 1; fi
+          echo "TF_VAR_db_password=${{ secrets.VIKUNJA_DB_PASSWORD }}" >> $GITHUB_ENV
+
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+            -backend-config="prefix=terraform"
+
+      - name: Select Terraform Workspace
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then WS=prod; else WS=dev; fi
+          echo "Using workspace: $WS"
+          if ! terraform workspace list | grep -q "^*\?\s*$WS$" && ! terraform workspace list | grep -q "\s$WS$"; then
+            terraform workspace new $WS
+          fi
+          terraform workspace select $WS
+          echo "TF_WORKSPACE=$WS" >> $GITHUB_ENV
+
+      - name: Set Workspace Output
+        id: set-ws
+        run: echo "workspace=$TF_WORKSPACE" >> "$GITHUB_OUTPUT"
+
+      - name: Terraform Format
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Install kubeconform
+        run: |
+          curl -sSL https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz | tar -xz kubeconform
+          sudo mv kubeconform /usr/local/bin/
+
+      - name: Helm Template (render)
+        run: helm template test charts/vikunja --values charts/vikunja/values.yaml > rendered.yaml
+
+      - name: Kubeconform Validate
+        run: kubeconform -ignore-missing-schemas -schema-location default -summary rendered.yaml
+
+      - name: Terraform Plan
+        run: terraform plan -input=false -var-file=environments/$TF_WORKSPACE.tfvars -no-color | tee plan.out
+
+      - name: Upload Plan Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan-${{ env.TF_WORKSPACE }}
+          path: plan.out
+
+  manual-approval:
+    name: Manual Approval
+    runs-on: ubuntu-latest
+    needs: terraform-plan
+    if: success() && github.ref == 'refs/heads/main'
+    permissions:
+      issues: write
+      contents: read
+    steps:
+      - name: Await Manual Approval
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ github.TOKEN }}
+          approvers: misskecupbung
+          minimum-approvals: 1
+          issue-title: "Manual Approval Required for Terraform Apply (workspace: ${{ needs.terraform-plan.outputs.workspace }})"
+          issue-body: |
+            Please approve or deny the deployment.
+            Workspace: ${{ needs.terraform-plan.outputs.workspace }}
+            Plan artifact: terraform-plan-${{ needs.terraform-plan.outputs.workspace }}
+            (Secret sourced from GitHub Actions secret VIKUNJA_DB_PASSWORD)
+
+  terraform-apply:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+    needs: [terraform-plan]
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      TARGET_WS: ${{ needs.terraform-plan.outputs.workspace }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
+      - name: Authenticate to Google Cloud (OIDC)
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_TERRAFORM_SA }}
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v3
+      - name: Export DB password (GitHub Secret)
+        run: |
+          if [ -z "${{ secrets.VIKUNJA_DB_PASSWORD }}" ]; then
+            echo "Missing required GitHub secret VIKUNJA_DB_PASSWORD" >&2; exit 1; fi
+          echo "TF_VAR_db_password=${{ secrets.VIKUNJA_DB_PASSWORD }}" >> $GITHUB_ENV
+
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+            -backend-config="prefix=terraform"
+      - name: Select Workspace
+        run: |
+          WS="$TARGET_WS"
+          echo "Applying to workspace: $WS"
+          terraform workspace list | grep -q "\s$WS$" || terraform workspace new $WS
+          terraform workspace select $WS
+          echo "TF_WORKSPACE=$WS" >> $GITHUB_ENV
+      - name: Terraform Apply
+        if: github.ref != 'refs/heads/main'
+        run: terraform apply -input=false -auto-approve -var-file=environments/$TF_WORKSPACE.tfvars
+      - name: Await Prod Approval Apply
+        if: github.ref == 'refs/heads/main'
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ github.TOKEN }}
+          approvers: misskecupbung
+          minimum-approvals: 1
+          issue-title: "Prod Apply Approval (workspace: ${{ needs.terraform-plan.outputs.workspace }})"
+          issue-body: "Approve to apply Terraform to production workspace."
+      - name: Terraform Apply (Prod)
+        if: github.ref == 'refs/heads/main'
+        run: terraform apply -input=false -auto-approve -var-file=environments/$TF_WORKSPACE.tfvars
