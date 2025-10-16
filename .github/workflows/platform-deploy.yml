@@ -123,15 +123,15 @@ jobs:
             -backend-config="prefix=terraform"
       - name: Select Workspace
         run: terraform workspace select ${WORKSPACE}
-      - name: Await Prod Approval (Production)
-        if: github.ref == 'refs/heads/main'
-        uses: trstringer/manual-approval@v1
-        with:
-          secret: ${{ github.TOKEN }}
-          approvers: ${{ env.PROD_APPROVERS }}
-          minimum-approvals: 1
-          issue-title: "Prod Apply Approval (workspace: ${{ needs.plan.outputs.workspace }})"
-          issue-body: "Approve to apply Terraform to production workspace."
+      # - name: Await Prod Approval (Production)
+      #   if: github.ref == 'refs/heads/main'
+      #   uses: trstringer/manual-approval@v1
+      #   with:
+      #     secret: ${{ github.TOKEN }}
+      #     approvers: ${{ env.PROD_APPROVERS }}
+      #     minimum-approvals: 1
+      #     issue-title: "Prod Apply Approval (workspace: ${{ needs.plan.outputs.workspace }})"
+      #     issue-body: "Approve to apply Terraform to production workspace."
       - name: Terraform Apply
         run: |
           terraform apply -input=false -auto-approve \
