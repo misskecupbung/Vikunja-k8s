@@ -13,15 +13,7 @@ spec:
     - Ingress
     - Egress
   ingress:
-    - from:
-{{- if .Values.networkPolicy.ingressControllerNamespace }}
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: {{ .Values.networkPolicy.ingressControllerNamespace | quote }}
-{{- else }}
-        - {}
-{{- end }}
-      ports:
+    - ports:
         - protocol: TCP
           port: 80
         - protocol: TCP
