@@ -1,52 +1,45 @@
+<!-- Concise, dev-focused README; see CASE_STUDY.md for the full narrative & rationale -->
 # Vikunja on GKE
 
-Fully automated deployment of Vikunja (API + frontend) on Google Kubernetes Engine using Terraform for infrastructure and Helm for applications. Includes optional Keycloak for OIDC and private Cloud SQL Postgres. A shared GCE Ingress exposes both services over a single global static IP.
+Container-native, automated deployment of the Vikunja task management platform (API + frontend) on Google Kubernetes Engine. Infrastructure is provisioned with Terraform; applications are packaged and deployed with Helm. Optional Keycloak (OIDC) and managed Cloud SQL Postgres are integrated behind a single global HTTPS load balancer.
 
-## Table of Contents
-1. Overview
-2. Architecture Diagram (Conceptual)
-3. Quick Start (Dev)
-4. Infrastructure Modules
-5. Helm Charts & Configuration
-6. Secrets & Security Model
-7. OIDC / Keycloak Integration
-8. CI/CD Workflow
-9. Operations (Scale, Rollback, Cleanup)
-10. Hardening & Production Notes
+> For the detailed architectural deep-dive (tooling rationale, alternatives, HA, security posture), read: [CASE_STUDY.md](./CASE_STUDY.md)
 
-## 1. Overview
-Provisioned components:
-- VPC + Subnet + secondary ranges (Pods / Services)
-- Private Service Networking for Cloud SQL
-- GKE cluster (Workload Identity enabled)
-- Optional private-only Cloud SQL instance (Vikunja + optional Keycloak DBs)
-- Global static IPv4 + shared ingress (`charts/platform`)
-- Helm charts: `vikunja`, `keycloak`, `platform`
+## TL;DR Features
+* Terraform modules: VPC/networking, GKE (Workload Identity), Cloud SQL (private IP)
+* Helm charts: `vikunja` (API+frontend), `keycloak` (optional IdP), `platform` (Ingress + certs)
+* Single global static IP, host + path routing (`/api` vs root) via GCE Ingress
+* OIDC login (Keycloak) pluggable through values
+* Horizontal scaling (HPA), PodDisruptionBudget, basic NetworkPolicy skeleton
+* GitHub Actions pipeline (plan, apply, deploy, validate)
 
-## 2. Architecture (Conceptual)
+## Architecture Snapshot
 ```
-   Internet
-      |
-  Global Static IP (GCE Ingress)  <-- ManagedCertificate (HTTPS)
-      |
-  +----------------------------+
-  |          Ingress          |
-  +--------------+------------+
-                 |
-        +--------+--------+
-        |                 |
-    Vikunja Service   Keycloak Service
-        |                 |
-   (API+Frontend Pods)   (Keycloak Pod)
-        |
-   Cloud SQL (Private IP)
+Internet → Global HTTPS LB (ManagedCertificate) → Ingress
+    ├─ vikunja.misskecupbung.xyz (/ → frontend, /api → API)
+    └─ keycloak.misskecupbung.xyz (optional)
+Front/API Pods → Cloud SQL (private service networking)
 ```
 
-## 3. Quick Start (Dev Environment)
-Prerequisites: `terraform >= 1.6`, `gcloud`, `helm`, `openssl`.
+![Architecture Diagram](./images/vikunja-architecture.png)
+
+
+## Repo Layout
+| Path | Purpose |
+|------|---------|
+| `modules/network` | VPC, subnet, secondary ranges, private service networking |
+| `modules/gke` | GKE cluster + node pool (Workload Identity) |
+| `modules/cloudsql` | Postgres instance + DB/users (private IP) |
+| `charts/vikunja` | App deployment (API + frontend, config, HPA, service, network policy) |
+| `charts/keycloak` | Optional Keycloak deployment |
+| `charts/platform` | Ingress + ManagedCertificate + host routing |
+| `environments/` | Environment-specific tfvars & backend config |
+| `scripts/diagnose.sh` | Cluster troubleshooting helper |
+
+## Quick Start (Dev)
+Prereqs: `terraform >= 1.6`, `gcloud`, `helm`, `openssl`, authenticated `gcloud` session.
 ```bash
-PROJECT_ID="your-project"
-REGION="us-central1"
+PROJECT_ID="your-project"; REGION="us-central1"
 gsutil mb -p "$PROJECT_ID" -l $REGION gs://$PROJECT_ID-tf-state || true
 terraform init -backend-config="bucket=$PROJECT_ID-tf-state" -backend-config="prefix=terraform"
 terraform workspace new dev 2>/dev/null || true
@@ -55,60 +48,41 @@ export TF_VAR_vikunja_db_password="$(openssl rand -base64 32)"
 export TF_VAR_keycloak_db_password="$(openssl rand -base64 32)"
 terraform apply -var-file=environments/dev.tfvars -auto-approve
 
+# Kube context
 gcloud container clusters get-credentials $(terraform output -raw gke_cluster_name) --region $REGION
-# Create application secrets
+
+# Secrets (DB + OIDC client placeholder)
 kubectl create secret generic vikunja-db --from-literal=password="$TF_VAR_vikunja_db_password" --dry-run=client -o yaml | kubectl apply -f -
 kubectl create secret generic vikunja-oidc-client --from-literal=clientsecret="CHANGE_ME" --dry-run=client -o yaml | kubectl apply -f -
 
+# Deploy Vikunja (Cloud SQL instance name from output)
 helm upgrade --install vikunja charts/vikunja \
   --set cloudsql.instanceConnectionName="$(terraform output -raw cloudsql_instance)" \
-  --set postgres.host=127.0.0.1
+  -f charts/vikunja/values.yaml
+
+# (Optional) Keycloak
+helm upgrade --install keycloak charts/keycloak -f charts/keycloak/values.yaml
+
+# (Optional) Platform ingress (if not already applied by pipeline)
+helm upgrade --install platform charts/platform -f charts/platform/values.yaml
 ```
-If DNS/Ingress not ready, port‑forward:
+Ingress/DNS pending? Temporary access:
 ```bash
 kubectl port-forward svc/vikunja 8080:80
 open http://localhost:8080
 ```
 
-## 4. Infrastructure Modules
-| Module | Purpose |
-|--------|---------|
-| `network` | VPC, subnet, secondary ranges, private service networking peering |
-| `gke` | GKE cluster + node pool (autoscaling, workload identity, monitoring) |
-| `cloudsql` | Postgres instance, databases & users (private IP only) |
-
-Key design: private Cloud SQL via service networking (`google_service_networking_connection`). Public IP disabled.
-
-## 5. Helm Charts & Configuration
-`charts/vikunja`:
-- Deployment (API + frontend containers)
-- ConfigMap (`config.yml`) with OpenID provider list
-- Secret-based OIDC client secret injected via env var
-- HPA (conditional on `autoscaling.enabled`)
-- Service exposing ports 80 (frontend) & 3456 (API)
-
-Important values (`charts/vikunja/values.yaml`):
-| Key | Purpose |
+## Core Helm Values (Vikunja)
+| Key | Meaning |
 |-----|---------|
-| `postgres.secretName` | Kubernetes Secret containing DB password |
-| `openid.providers[]` | List of OIDC providers (name, authurl, logouturl, clientid, scopes) |
-| `openid.secretName` | Secret containing confidential client secret |
-| `autoscaling.*` | HPA configuration (enabled, min/max, targetCPUUtilizationPercentage) |
-| `resources.*` | API container resource requests/limits |
+| `postgres.secretName` | Secret containing DB password |
+| `cloudsql.instanceConnectionName` | GCP instance connection name if using Cloud SQL connector |
+| `openid.providers[]` | Array of OIDC providers (name, authurl, logouturl, clientid, scopes) |
+| `openid.secretName` | Secret with confidential client secret |
+| `autoscaling.enabled` | Enable HPA (CPU target via `targetCPUUtilizationPercentage`) |
+| `resources` | Container resource requests/limits |
 
-## 6. Secrets & Security Model
-Secrets are delivered via Kubernetes Secrets (not ConfigMaps):
-- `vikunja-db`: Postgres password (`VIKUNJA_DATABASE_PASSWORD` via secretKeyRef)
-- `vikunja-oidc-client`: OIDC client confidential secret (`VIKUNJA_AUTH_OPENID_PROVIDERS_0_CLIENTSECRET`)
-
-Recommended hardening:
-- Use GCP Secret Manager + External Secrets Operator (future)
-- Enable NetworkPolicies to restrict egress
-- Add PodSecurity / runAsNonRoot settings
-- Rotate secrets via CI and rolling restart
-
-## 7. OIDC / Keycloak Integration
-Chart now uses provider array only:
+Minimal OIDC example (Keycloak):
 ```yaml
 openid:
   enabled: true
@@ -120,58 +94,56 @@ openid:
       clientid: vikunja
       scopes: [openid, email, profile]
 ```
-Redirect URL pattern inside Vikunja: `https://<host>/auth/openid/<provider-name>`.
 
-Debug commands:
+## CI/CD (GitHub Actions)
+Stages (conceptual): Plan → Apply Infra → Deploy Keycloak (optional) → Deploy Vikunja → Deploy Platform (Ingress). Includes Helm lint & conformance checks.
+
+## Operations Cheatsheet
+```bash
+# Scale (if HPA disabled)
+kubectl scale deploy/vikunja --replicas=3
+# Rollback Helm release
+helm rollback vikunja <revision>
+# Restart rollout
+kubectl rollout restart deploy/vikunja
+# Destroy dev infra
+terraform workspace select dev && terraform destroy -var-file=environments/dev.tfvars -auto-approve
+```
+Troubleshoot:
 ```bash
 kubectl logs deploy/vikunja -c api | grep -i openid || true
-curl -s https://keycloak.misskecupbung.xyz/realms/vikunja/.well-known/openid-configuration | jq '.issuer'
-```
-Add another provider by appending to `openid.providers` and providing its secret (if confidential).
-
-## 8. CI/CD Workflow
-GitHub Actions pipeline stages:
-1. Plan: Terraform plan + Helm lint + kubeconform.
-2. Apply: Terraform apply (infra creation/update).
-3. Deploy Keycloak: Helm upgrade with realm settings.
-4. Deploy Vikunja: Creates secrets, deploys chart.
-5. Deploy Platform ingress: Shared static IP + hostname routing.
-
-## 9. Operations
-Scale manually (if HPA disabled):
-```bash
-kubectl scale deploy/vikunja --replicas=3
-```
-Rollback:
-```bash
-helm rollback vikunja <revision>
-```
-Restart:
-```bash
-kubectl rollout restart deploy/vikunja
-```
-Cleanup:
-```bash
-terraform workspace select dev
-terraform destroy -var-file=environments/dev.tfvars -auto-approve
+kubectl get events --sort-by=.metadata.creationTimestamp | tail -20
 ```
 
-## 10. Hardening & Production Notes
-- Cloud SQL tier: increase from `db-f1-micro` to production class (e.g., `db-custom-2-8192`).
-- Set `autoscaling.maxReplicas` per load tests.
-- Add Prometheus metrics & alerts.
-- Enforce NetworkPolicy deny-all + explicit allowlist.
-- TLS termination: ensure certificate covers all hostnames.
-- Regular backups verified & PITR expectations documented.
+## Security & Hardening (Current vs Next)
+Current: Private Cloud SQL, Workload Identity, basic NetworkPolicy (ingress restricted to service ports), secrets via Kubernetes, PDB.
+Next steps:
+* Deny-by-default NetworkPolicies + explicit allowlists
+* External Secrets (GCP Secret Manager)
+* Image provenance (Cosign) & vulnerability scans
+* Resource limit tuning + topology spread / pod anti-affinity
+* Prometheus + alerting, structured logging aggregation
 
-## Troubleshooting Cheat Sheet
-| Issue | Likely Cause | Action |
-|-------|--------------|--------|
-| 403 after OIDC redirect | Redirect URI mismatch | Verify provider name & Keycloak client redirect URIs |
-| OIDC providers missing | Empty providers list or parse error | Check ConfigMap render & pod logs |
-| DB auth failures | Secret name/key mismatch | Confirm `vikunja-db` secret and env var mapping |
-| Slow startup probes fail | Probe timing too aggressive | Increase `initialDelaySeconds` or `periodSeconds` |
-| Missing HPA | `autoscaling.enabled` false | Set value or add to `values.yaml` |
+## Roadmap Highlights
+| Area | Future Enhancement |
+|------|--------------------|
+| Scaling | Add VPA or refine HPA metrics | 
+| DB | Introduce PgBouncer / connection pooling | 
+| Security | mTLS internal, stronger PSP/PodSecurity admission | 
+| Observability | Full metrics + tracing + logs stack | 
+| Reliability | Regional / multi-zone DB tier, chaos testing | 
+
+## Quick Issue Triage
+| Symptom | Check |
+|---------|-------|
+| 403 after OIDC login | Redirect URI & provider name |
+| DB auth failures | Secret name/key & env var mapping |
+| OIDC providers missing | Rendered ConfigMap & pod logs |
+| Startup probe fail | Probe timings in values |
+
+## Contributing / Extending
+Open a feature branch, run terraform plan & helm lint in CI. For architectural or security changes, update `CASE_STUDY.md` accordingly.
 
 ---
-Defaults target development convenience. Review secrets, network policy, storage class, and resource sizing before production use.
+Default settings optimize for development speed. Review secrets, sizing, network boundaries, and observability before promoting to production. See [CASE_STUDY.md](./CASE_STUDY.md) for justification & deeper context.
+<!-- End of concise README -->
